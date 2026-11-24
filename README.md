@@ -58,4 +58,4 @@ kefu-huahua/
 
 ## 🤝 开源与许可
 
-本项目基于 MIT 协议开源。
+本项目基于 MIT 协议开源。制作：Gemini antigravity。模型：3.8flash。
