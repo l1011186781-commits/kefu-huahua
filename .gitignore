@@ -1,0 +1,13 @@
+# 编译产物
+*.exe
+*.dll
+*.pdb
+*.zip
+backup_*.zip
+
+# 本地数据目录与临时文件
+images/
+bin/
+obj/
+.vs/
+*.user
