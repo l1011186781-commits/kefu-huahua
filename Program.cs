@@ -42,12 +42,22 @@ namespace HuahuaHelper
         public int FontSizeLevel { get; set; } // 0:标准(9pt), 1:中号(11pt), 2:大号(13pt), 3:特大(15pt)
         public string ThemeType { get; set; }   // "white", "black", "custom"
         public string CustomBgPath { get; set; }
+        public int WindowWidth { get; set; }
+        public int WindowHeight { get; set; }
+        public int WindowX { get; set; }
+        public int WindowY { get; set; }
+        public bool HasWindowPos { get; set; }
 
         public AppSettings()
         {
             FontSizeLevel = 0;
             ThemeType = "white";
             CustomBgPath = "";
+            WindowWidth = 320;
+            WindowHeight = 680;
+            WindowX = -1;
+            WindowY = -1;
+            HasWindowPos = false;
         }
     }
 
@@ -832,10 +842,68 @@ namespace HuahuaHelper
 
             InitializeUi();
             LoadData();
+            RestoreWindowBounds();
             ApplySettings();
             _categoryBar.SetCategories(_data.Categories, _currentCat);
             RefreshList();
             StartTracking();
+
+            this.ResizeEnd += (s, e) => SaveWindowBounds();
+            this.FormClosing += (s, e) => SaveWindowBounds();
+        }
+
+        private void RestoreWindowBounds()
+        {
+            if (_data == null || _data.Settings == null) return;
+
+            int w = _data.Settings.WindowWidth;
+            int h = _data.Settings.WindowHeight;
+            if (w >= this.MinimumSize.Width && h >= this.MinimumSize.Height)
+            {
+                this.Size = new Size(w, h);
+            }
+
+            if (_data.Settings.HasWindowPos)
+            {
+                Rectangle savedRect = new Rectangle(_data.Settings.WindowX, _data.Settings.WindowY, this.Width, 40);
+                bool onScreen = false;
+                foreach (Screen scr in Screen.AllScreens)
+                {
+                    if (scr.WorkingArea.IntersectsWith(savedRect))
+                    {
+                        onScreen = true;
+                        break;
+                    }
+                }
+                if (onScreen)
+                {
+                    this.Location = new Point(_data.Settings.WindowX, _data.Settings.WindowY);
+                }
+            }
+        }
+
+        private void SaveWindowBounds()
+        {
+            if (_data == null || _data.Settings == null) return;
+
+            Rectangle bounds = (this.WindowState == FormWindowState.Normal) ? this.Bounds : this.RestoreBounds;
+            if (bounds.Width >= this.MinimumSize.Width && bounds.Height >= this.MinimumSize.Height)
+            {
+                bool changed = (_data.Settings.WindowWidth != bounds.Width ||
+                                _data.Settings.WindowHeight != bounds.Height ||
+                                _data.Settings.WindowX != bounds.X ||
+                                _data.Settings.WindowY != bounds.Y ||
+                                !_data.Settings.HasWindowPos);
+                if (changed)
+                {
+                    _data.Settings.WindowWidth = bounds.Width;
+                    _data.Settings.WindowHeight = bounds.Height;
+                    _data.Settings.WindowX = bounds.X;
+                    _data.Settings.WindowY = bounds.Y;
+                    _data.Settings.HasWindowPos = true;
+                    SaveData();
+                }
+            }
         }
 
         private void InitializeUi()
@@ -2015,7 +2083,12 @@ namespace HuahuaHelper
             sb.Append("  \"Settings\": {\n");
             sb.AppendFormat("    \"FontSizeLevel\": {0},\n", data.Settings.FontSizeLevel);
             sb.AppendFormat("    \"ThemeType\": \"{0}\",\n", Escape(data.Settings.ThemeType));
-            sb.AppendFormat("    \"CustomBgPath\": \"{0}\"\n", Escape(data.Settings.CustomBgPath));
+            sb.AppendFormat("    \"CustomBgPath\": \"{0}\",\n", Escape(data.Settings.CustomBgPath));
+            sb.AppendFormat("    \"WindowWidth\": {0},\n", data.Settings.WindowWidth);
+            sb.AppendFormat("    \"WindowHeight\": {0},\n", data.Settings.WindowHeight);
+            sb.AppendFormat("    \"WindowX\": {0},\n", data.Settings.WindowX);
+            sb.AppendFormat("    \"WindowY\": {0},\n", data.Settings.WindowY);
+            sb.AppendFormat("    \"HasWindowPos\": {0}\n", data.Settings.HasWindowPos ? "true" : "false");
             sb.Append("  },\n");
 
             // Categories
@@ -2060,6 +2133,25 @@ namespace HuahuaHelper
 
             string customBg = ExtractValue(json, "CustomBgPath");
             if (!string.IsNullOrEmpty(customBg)) appData.Settings.CustomBgPath = customBg;
+
+            string wStr = ExtractValue(json, "WindowWidth");
+            int wVal;
+            if (int.TryParse(wStr, out wVal)) appData.Settings.WindowWidth = wVal;
+
+            string hStr = ExtractValue(json, "WindowHeight");
+            int hVal;
+            if (int.TryParse(hStr, out hVal)) appData.Settings.WindowHeight = hVal;
+
+            string xStr = ExtractValue(json, "WindowX");
+            int xVal;
+            if (int.TryParse(xStr, out xVal)) appData.Settings.WindowX = xVal;
+
+            string yStr = ExtractValue(json, "WindowY");
+            int yVal;
+            if (int.TryParse(yStr, out yVal)) appData.Settings.WindowY = yVal;
+
+            string hasPosStr = ExtractValue(json, "HasWindowPos");
+            if (hasPosStr == "true") appData.Settings.HasWindowPos = true;
 
             int catIdx = json.IndexOf("\"Categories\":");
             if (catIdx != -1)
