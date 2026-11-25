@@ -6,10 +6,22 @@ using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+
+[assembly: AssemblyTitle("客服花花")]
+[assembly: AssemblyDescription("千牛工作台快捷回复辅助工具")]
+[assembly: AssemblyConfiguration("")]
+[assembly: AssemblyCompany("HuahuaHelper")]
+[assembly: AssemblyProduct("客服花花")]
+[assembly: AssemblyCopyright("Copyright (C) 2026 HuahuaHelper")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace HuahuaHelper
 {
@@ -41,6 +53,7 @@ namespace HuahuaHelper
     {
         public int FontSizeLevel { get; set; } // 0:标准(9pt), 1:中号(11pt), 2:大号(13pt), 3:特大(15pt)
         public string ThemeType { get; set; }   // "white", "black", "custom"
+        public string ColorScheme { get; set; } // "orange": 暖橙纸感, "pink": 樱粉花语
         public string CustomBgPath { get; set; }
         public int WindowWidth { get; set; }
         public int WindowHeight { get; set; }
@@ -52,6 +65,7 @@ namespace HuahuaHelper
         {
             FontSizeLevel = 0;
             ThemeType = "white";
+            ColorScheme = "orange";
             CustomBgPath = "";
             WindowWidth = 320;
             WindowHeight = 680;
@@ -76,7 +90,195 @@ namespace HuahuaHelper
     }
 
     /// <summary>
-    /// iOS 液体玻璃质感绘制核心工具类 (Liquid Glassmorphism Engine)
+    /// 主题色板定义（支持 主题一「暖橙纸感」 与 主题二「樱粉花语」）
+    /// </summary>
+    public class ThemePalette
+    {
+        public bool IsPink;
+        public Color Primary;
+        public Color PrimaryHover;
+        public Color PrimaryPressed;
+        public Color DangerRed;
+        public Color FocusRing;
+
+        public Color LightPaperBg;
+        public Color LightCardBg;
+        public Color LightTextPrimary;
+        public Color LightTextSecondary;
+        public Color LightTextMuted;
+        public Color LightChipText;
+        public Color LightDivider;
+        public Color LightBorder;
+        public Color LightRowHover;
+        public Color LightRowSelected;
+        public Color LightSearchBg;
+        public Color LightScrollThumb;
+
+        public Color DarkPaperBg;
+        public Color DarkCardBg;
+        public Color DarkTextPrimary;
+        public Color DarkTextSecondary;
+        public Color DarkTextMuted;
+        public Color DarkDivider;
+        public Color DarkPrimaryAccent;
+        public Color DarkRowHover;
+        public Color DarkRowSelected;
+        public Color DarkScrollThumb;
+    }
+
+    public static class WarmTheme
+    {
+        public static readonly ThemePalette OrangePalette = new ThemePalette
+        {
+            IsPink = false,
+            Primary = Color.FromArgb(255, 80, 0),            // #FF5000
+            PrimaryHover = Color.FromArgb(255, 106, 31),     // #FF6A1F
+            PrimaryPressed = Color.FromArgb(230, 72, 0),     // #E64800
+            DangerRed = Color.FromArgb(220, 38, 38),         // #DC2626
+            FocusRing = Color.FromArgb(255, 178, 135),       // #FFB287
+
+            LightPaperBg = Color.FromArgb(250, 247, 242),    // #FAF7F2
+            LightCardBg = Color.FromArgb(255, 255, 255),     // #FFFFFF
+            LightTextPrimary = Color.FromArgb(41, 37, 36),   // #292524
+            LightTextSecondary = Color.FromArgb(120, 113, 108), // #78716C
+            LightTextMuted = Color.FromArgb(168, 162, 158),  // #A8A29E
+            LightChipText = Color.FromArgb(87, 83, 78),      // #57534E
+            LightDivider = Color.FromArgb(234, 227, 216),    // #EAE3D8
+            LightBorder = Color.FromArgb(231, 224, 214),     // #E7E0D6
+            LightRowHover = Color.FromArgb(255, 241, 232),   // #FFF1E8
+            LightRowSelected = Color.FromArgb(255, 231, 216),
+            LightSearchBg = Color.FromArgb(245, 241, 234),   // #F5F1EA
+            LightScrollThumb = Color.FromArgb(214, 208, 198),// #D6D0C6
+
+            DarkPaperBg = Color.FromArgb(28, 25, 23),        // #1C1917
+            DarkCardBg = Color.FromArgb(41, 37, 36),         // #292524
+            DarkTextPrimary = Color.FromArgb(245, 240, 234), // #F5F0EA
+            DarkTextSecondary = Color.FromArgb(168, 162, 158), // #A8A29E
+            DarkTextMuted = Color.FromArgb(120, 113, 108),   // #78716C
+            DarkDivider = Color.FromArgb(68, 64, 60),        // #44403C
+            DarkPrimaryAccent = Color.FromArgb(255, 106, 31),// #FF6A1F
+            DarkRowHover = Color.FromArgb(59, 36, 26),       // #3B241A
+            DarkRowSelected = Color.FromArgb(74, 43, 30),
+            DarkScrollThumb = Color.FromArgb(87, 83, 78)     // #57534E
+        };
+
+        public static readonly ThemePalette PinkPalette = new ThemePalette
+        {
+            IsPink = true,
+            Primary = Color.FromArgb(250, 114, 152),         // #FA7298
+            PrimaryHover = Color.FromArgb(251, 140, 169),    // #FB8CA9
+            PrimaryPressed = Color.FromArgb(232, 93, 126),   // #E85D7E
+            DangerRed = Color.FromArgb(220, 38, 38),         // #DC2626
+            FocusRing = Color.FromArgb(253, 185, 200),       // #FDB9C8
+
+            LightPaperBg = Color.FromArgb(253, 248, 249),    // #FDF8F9
+            LightCardBg = Color.FromArgb(255, 255, 255),     // #FFFFFF
+            LightTextPrimary = Color.FromArgb(51, 46, 47),   // #332E2F
+            LightTextSecondary = Color.FromArgb(151, 138, 142), // #978A8E
+            LightTextMuted = Color.FromArgb(196, 184, 187),  // #C4B8BB
+            LightChipText = Color.FromArgb(87, 83, 78),      // #57534E
+            LightDivider = Color.FromArgb(243, 226, 230),    // #F3E2E6
+            LightBorder = Color.FromArgb(237, 217, 222),     // #EDD9DE
+            LightRowHover = Color.FromArgb(253, 238, 242),   // #FDEEF2
+            LightRowSelected = Color.FromArgb(251, 224, 232),
+            LightSearchBg = Color.FromArgb(249, 239, 241),   // #F9EFF1
+            LightScrollThumb = Color.FromArgb(227, 203, 210),// #E3CBD2
+
+            DarkPaperBg = Color.FromArgb(34, 26, 30),        // #221A1E
+            DarkCardBg = Color.FromArgb(46, 36, 41),         // #2E2429
+            DarkTextPrimary = Color.FromArgb(253, 242, 245), // #FDF2F5
+            DarkTextSecondary = Color.FromArgb(184, 166, 171), // #B8A6AB
+            DarkTextMuted = Color.FromArgb(138, 118, 124),   // #8A767C
+            DarkDivider = Color.FromArgb(74, 54, 62),        // #4A363E
+            DarkPrimaryAccent = Color.FromArgb(251, 140, 169), // #FB8CA9
+            DarkRowHover = Color.FromArgb(61, 37, 48),       // #3D2530
+            DarkRowSelected = Color.FromArgb(78, 45, 60),
+            DarkScrollThumb = Color.FromArgb(90, 66, 75)     // #5A424B
+        };
+
+        public static ThemePalette Current = OrangePalette;
+
+        public static void SetScheme(string scheme)
+        {
+            Current = (scheme == "pink") ? PinkPalette : OrangePalette;
+        }
+
+        // 兼容静态访问属性（动态指向 Current）
+        public static Color Orange { get { return Current.Primary; } }
+        public static Color OrangeHover { get { return Current.PrimaryHover; } }
+        public static Color OrangePressed { get { return Current.PrimaryPressed; } }
+        public static Color DangerRed { get { return Current.DangerRed; } }
+        public static Color FocusRing { get { return Current.FocusRing; } }
+
+        public static Color LightPaperBg { get { return Current.LightPaperBg; } }
+        public static Color LightCardBg { get { return Current.LightCardBg; } }
+        public static Color LightTextPrimary { get { return Current.LightTextPrimary; } }
+        public static Color LightTextSecondary { get { return Current.LightTextSecondary; } }
+        public static Color LightTextMuted { get { return Current.LightTextMuted; } }
+        public static Color LightChipText { get { return Current.LightChipText; } }
+        public static Color LightDivider { get { return Current.LightDivider; } }
+        public static Color LightBorder { get { return Current.LightBorder; } }
+        public static Color LightRowHover { get { return Current.LightRowHover; } }
+        public static Color LightRowSelected { get { return Current.LightRowSelected; } }
+        public static Color LightSearchBg { get { return Current.LightSearchBg; } }
+        public static Color LightScrollThumb { get { return Current.LightScrollThumb; } }
+
+        public static Color DarkPaperBg { get { return Current.DarkPaperBg; } }
+        public static Color DarkCardBg { get { return Current.DarkCardBg; } }
+        public static Color DarkTextPrimary { get { return Current.DarkTextPrimary; } }
+        public static Color DarkTextSecondary { get { return Current.DarkTextSecondary; } }
+        public static Color DarkTextMuted { get { return Current.DarkTextMuted; } }
+        public static Color DarkDivider { get { return Current.DarkDivider; } }
+        public static Color DarkPrimaryAccent { get { return Current.DarkPrimaryAccent; } }
+        public static Color DarkRowHover { get { return Current.DarkRowHover; } }
+        public static Color DarkRowSelected { get { return Current.DarkRowSelected; } }
+        public static Color DarkScrollThumb { get { return Current.DarkScrollThumb; } }
+    }
+
+    /// <summary>
+    /// iOS 26 Liquid Glass 分层参数（浅色 / 深色两套）
+    /// </summary>
+    public class LiquidGlassParams
+    {
+        public Color BlurLayer1;     // 分层模糊模拟底色 1
+        public Color BlurLayer2;     // 分层模糊模拟底色 2
+        public Color GlassFill;      // 玻璃半透明主体 (白色 12%~28%)
+        public Color GlassHoverFill; // 悬停增强填充
+        public Color InnerRefract;   // 边缘内侧折射加亮
+        public Color TopHighlight;   // 顶部 1px 高光描边
+        public Color InnerShadow;    // 内阴影
+        public Color OuterShadow;    // 外层柔和投影
+        public Color OuterBorder;    // 外轮廓边
+
+        public static readonly LiquidGlassParams Light = new LiquidGlassParams
+        {
+            BlurLayer1 = Color.FromArgb(24, 255, 255, 255),      // ~9% 底层柔光
+            BlurLayer2 = Color.FromArgb(46, 255, 255, 255),      // ~18% 中层磨砂
+            GlassFill = Color.FromArgb(56, 255, 255, 255),       // ~22% 白色玻璃体 (12%~28%)
+            GlassHoverFill = Color.FromArgb(72, 255, 255, 255),  // ~28% 悬停态
+            InnerRefract = Color.FromArgb(145, 255, 255, 255),   // 内侧加亮模拟折射
+            TopHighlight = Color.FromArgb(230, 255, 255, 255),   // 顶部 1px 高光描边
+            InnerShadow = Color.FromArgb(18, 0, 0, 0),           // 底部微弱内阴影
+            OuterShadow = Color.FromArgb(22, 0, 0, 0),           // 外层柔和投影
+            OuterBorder = Color.FromArgb(55, 0, 0, 0)            // 浅色微边框
+        };
+
+        public static readonly LiquidGlassParams Dark = new LiquidGlassParams
+        {
+            BlurLayer1 = Color.FromArgb(20, 255, 255, 255),      // ~8% 深色柔光
+            BlurLayer2 = Color.FromArgb(32, 255, 255, 255),      // ~12.5% 玻璃层
+            GlassFill = Color.FromArgb(38, 255, 255, 255),       // ~15% 白色玻璃体 (12%~28%)
+            GlassHoverFill = Color.FromArgb(56, 255, 255, 255),  // ~22% 悬停态
+            InnerRefract = Color.FromArgb(90, 255, 255, 255),    // 内侧折射亮边
+            TopHighlight = Color.FromArgb(165, 255, 255, 255),   // 顶部 1px 高光描边
+            InnerShadow = Color.FromArgb(45, 0, 0, 0),           // 深色内阴影
+            OuterShadow = Color.FromArgb(55, 0, 0, 0),           // 深色外层柔和投影
+            OuterBorder = Color.FromArgb(70, 255, 255, 255)      // 深色微亮外框
+        };
+    }
+
+    /// <summary>
+    /// iOS 26 Liquid Glass GDI+ 渲染引擎（无第三方依赖）
     /// </summary>
     public static class GlassRenderer
     {
@@ -89,7 +291,12 @@ namespace HuahuaHelper
                 return path;
             }
 
-            int d = radius * 2;
+            int d = Math.Min(radius * 2, Math.Min(rect.Width, rect.Height));
+            if (d <= 0)
+            {
+                path.AddRectangle(rect);
+                return path;
+            }
             int r = rect.Right;
             int b = rect.Bottom;
 
@@ -102,58 +309,165 @@ namespace HuahuaHelper
         }
 
         /// <summary>
-        /// 绘制具有光泽折射与通透高光的 iOS 液体玻璃按钮
+        /// 顶栏 / 玻璃卡片面板绘制：分层半透明色块模拟背景模糊 + 顶部高光 + 内折射
         /// </summary>
-        public static void DrawLiquidGlassButton(Graphics g, Rectangle rect, Color baseTop, Color baseBottom, Color borderCol, bool isHover, int radius = 6)
+        public static void DrawLiquidGlassPanel(Graphics g, Rectangle rect, bool isDark, int radius = 0)
         {
             if (rect.Width <= 0 || rect.Height <= 0) return;
-
             g.SmoothingMode = SmoothingMode.AntiAlias;
-
-            // 1. 微弱柔和阴影
-            Rectangle shadowRect = new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height);
-            using (GraphicsPath sPath = CreateRoundedPath(shadowRect, radius))
-            using (Brush sBrush = new SolidBrush(Color.FromArgb(isHover ? 35 : 20, 0, 0, 0)))
-            {
-                g.FillPath(sBrush, sPath);
-            }
+            LiquidGlassParams p = isDark ? LiquidGlassParams.Dark : LiquidGlassParams.Light;
 
             using (GraphicsPath path = CreateRoundedPath(rect, radius))
             {
-                // 2. 液体玻璃基础半透明渐变
-                Color top = isHover ? Color.FromArgb(Math.Min(255, baseTop.A + 25), baseTop) : baseTop;
-                Color bottom = isHover ? Color.FromArgb(Math.Min(255, baseBottom.A + 25), baseBottom) : baseBottom;
-
-                using (LinearGradientBrush lgb = new LinearGradientBrush(rect, top, bottom, LinearGradientMode.Vertical))
+                // 分层半透明色块模拟毛玻璃模糊散射
+                using (Brush b1 = new SolidBrush(p.BlurLayer1)) g.FillPath(b1, path);
+                Rectangle innerBlur = new Rectangle(rect.X + 1, rect.Y + 1, Math.Max(1, rect.Width - 2), Math.Max(1, rect.Height - 2));
+                using (GraphicsPath innerPath = CreateRoundedPath(innerBlur, Math.Max(0, radius - 1)))
+                using (Brush b2 = new SolidBrush(p.BlurLayer2))
                 {
-                    g.FillPath(lgb, path);
+                    g.FillPath(b2, innerPath);
                 }
+                using (Brush bGlass = new SolidBrush(p.GlassFill)) g.FillPath(bGlass, path);
 
-                // 3. 顶部微弧高光反射层 (Liquid Gloss Highlight)
-                Rectangle glossRect = new Rectangle(rect.X, rect.Y, rect.Width, rect.Height / 2);
-                if (glossRect.Height > 0)
+                // 顶部 1px 高光描边
+                using (Pen topPen = new Pen(p.TopHighlight, 1))
                 {
-                    using (GraphicsPath gPath = CreateRoundedPath(glossRect, radius))
-                    using (LinearGradientBrush glossLgb = new LinearGradientBrush(glossRect,
-                        Color.FromArgb(isHover ? 110 : 80, 255, 255, 255),
-                        Color.FromArgb(10, 255, 255, 255), LinearGradientMode.Vertical))
-                    {
-                        g.SetClip(path);
-                        g.FillRectangle(glossLgb, glossRect);
-                        g.ResetClip();
-                    }
-                }
-
-                // 4. 1px 晶莹外边缘与内高光折射
-                using (Pen pen = new Pen(borderCol, 1))
-                {
-                    g.DrawPath(pen, path);
+                    g.DrawLine(topPen, rect.X + radius, rect.Y, rect.Right - radius, rect.Y);
                 }
             }
         }
 
         /// <summary>
-        /// 纯矢量自绘的高清设置齿轮图标（永不模糊、永不错位、抗锯齿锐利）
+        /// iOS 26 Liquid Glass 按钮完整实现（半透明玻璃 / 主色液态玻璃、内侧折射、顶部 1px 高光、内外阴影）
+        /// </summary>
+        public static void DrawLiquidGlassButton(Graphics g, Rectangle rect, Color accentColor, bool isPrimary, bool isDark, bool isHover, bool isPressed = false, int radius = 6)
+        {
+            if (rect.Width <= 2 || rect.Height <= 2) return;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            LiquidGlassParams p = isDark ? LiquidGlassParams.Dark : LiquidGlassParams.Light;
+
+            // 1. 外层柔和投影（两层扩散，模拟悬浮感）
+            if (!isPressed)
+            {
+                Rectangle s2 = new Rectangle(rect.X, rect.Y + 2, rect.Width, rect.Height);
+                Rectangle s1 = new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height);
+                using (GraphicsPath p2 = CreateRoundedPath(s2, radius))
+                using (Brush b2 = new SolidBrush(Color.FromArgb(p.OuterShadow.A / 2, p.OuterShadow)))
+                    g.FillPath(b2, p2);
+                using (GraphicsPath p1 = CreateRoundedPath(s1, radius))
+                using (Brush b1 = new SolidBrush(p.OuterShadow))
+                    g.FillPath(b1, p1);
+            }
+
+            using (GraphicsPath path = CreateRoundedPath(rect, radius))
+            {
+                // 2. 分层半透明底色（模拟背景模糊）
+                if (isPrimary)
+                {
+                    int baseAlpha = isPressed ? 245 : (isHover ? 235 : 215);
+                    using (Brush baseBrush = new SolidBrush(Color.FromArgb(baseAlpha, accentColor)))
+                        g.FillPath(baseBrush, path);
+
+                    // 叠加白色玻璃半透层 (12%~28%) 产生通透液态感
+                    Color overlayCol = isHover ? p.GlassHoverFill : p.GlassFill;
+                    using (Brush glassOverlay = new SolidBrush(Color.FromArgb(isPressed ? 24 : overlayCol.A, 255, 255, 255)))
+                        g.FillPath(glassOverlay, path);
+                }
+                else
+                {
+                    using (Brush b1 = new SolidBrush(p.BlurLayer1)) g.FillPath(b1, path);
+                    using (Brush b2 = new SolidBrush(p.BlurLayer2)) g.FillPath(b2, path);
+                    Color glassFill = isPressed ? p.BlurLayer2 : (isHover ? p.GlassHoverFill : p.GlassFill);
+                    using (Brush bGlass = new SolidBrush(glassFill)) g.FillPath(bGlass, path);
+                }
+
+                // 3. 边缘内侧加亮模拟折射（内缩 1px 描边）
+                Rectangle refractRect = new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2);
+                if (refractRect.Width > 2 && refractRect.Height > 2)
+                {
+                    using (GraphicsPath rPath = CreateRoundedPath(refractRect, Math.Max(1, radius - 1)))
+                    using (Pen refractPen = new Pen(isPrimary ? Color.FromArgb(115, 255, 255, 255) : p.InnerRefract, 1))
+                    {
+                        g.DrawPath(refractPen, rPath);
+                    }
+                }
+
+                // 4. 顶部 1px 高光描边 + 底部内阴影
+                g.SetClip(path);
+                using (Pen topPen = new Pen(p.TopHighlight, 1))
+                {
+                    g.DrawLine(topPen, rect.X + 2, rect.Y + 1, rect.Right - 2, rect.Y + 1);
+                }
+                using (Pen innerShadowPen = new Pen(p.InnerShadow, 1))
+                {
+                    g.DrawLine(innerShadowPen, rect.X + 2, rect.Bottom - 2, rect.Right - 2, rect.Bottom - 2);
+                }
+                g.ResetClip();
+
+                // 5. 外轮廓细边框
+                Color outerCol = isPrimary ? Color.FromArgb(180, accentColor) : p.OuterBorder;
+                using (Pen outerPen = new Pen(outerCol, 1))
+                {
+                    g.DrawPath(outerPen, path);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 扁平实色按钮绘制（保留给次按钮/分类胶囊使用）
+        /// </summary>
+        public static void DrawLiquidGlassButton(Graphics g, Rectangle rect, Color fillNormal, Color fillHover, Color borderCol, bool isHover, int radius = 6, bool isPressed = false, Color? fillPressed = null)
+        {
+            if (rect.Width <= 0 || rect.Height <= 0) return;
+
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            // 1. 克制投影
+            Rectangle shadowRect = new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height);
+            using (GraphicsPath sPath = CreateRoundedPath(shadowRect, radius))
+            using (Brush sBrush = new SolidBrush(Color.FromArgb(20, 0, 0, 0)))
+            {
+                g.FillPath(sBrush, sPath);
+            }
+
+            // 2. 实色填充
+            Color bg = fillNormal;
+            if (isPressed && fillPressed.HasValue) bg = fillPressed.Value;
+            else if (isHover) bg = fillHover;
+
+            using (GraphicsPath path = CreateRoundedPath(rect, radius))
+            {
+                if (bg.A > 0)
+                {
+                    using (Brush b = new SolidBrush(bg))
+                    {
+                        g.FillPath(b, path);
+                    }
+                }
+
+                // 3. 1px 边框
+                if (borderCol.A > 0)
+                {
+                    using (Pen pen = new Pen(borderCol, 1))
+                    {
+                        g.DrawPath(pen, path);
+                    }
+                }
+            }
+        }
+
+        private static Pen CreateIconPen(Color color)
+        {
+            Pen p = new Pen(color, 1.5f);
+            p.StartCap = LineCap.Round;
+            p.EndCap = LineCap.Round;
+            p.LineJoin = LineJoin.Round;
+            return p;
+        }
+
+        /// <summary>
+        /// 16x16 矢量齿轮图标
         /// </summary>
         public static void DrawVectorGearIcon(Graphics g, Rectangle rect, Color gearColor)
         {
@@ -161,9 +475,9 @@ namespace HuahuaHelper
 
             float cx = rect.X + rect.Width / 2f;
             float cy = rect.Y + rect.Height / 2f;
-            float outerR = Math.Min(rect.Width, rect.Height) * 0.38f;
+            float outerR = Math.Min(rect.Width, rect.Height) * 0.36f;
             float innerR = outerR * 0.72f;
-            float holeR = outerR * 0.35f;
+            float holeR = outerR * 0.34f;
 
             using (GraphicsPath gearPath = new GraphicsPath())
             {
@@ -176,19 +490,15 @@ namespace HuahuaHelper
                 {
                     double angle = i * step;
 
-                    // 齿槽起点
                     double a1 = angle - toothHalf * 1.5;
                     pts.Add(new PointF(cx + (float)(Math.Cos(a1) * innerR), cy + (float)(Math.Sin(a1) * innerR)));
 
-                    // 齿顶起点
                     double a2 = angle - toothHalf * 0.7;
                     pts.Add(new PointF(cx + (float)(Math.Cos(a2) * outerR), cy + (float)(Math.Sin(a2) * outerR)));
 
-                    // 齿顶终点
                     double a3 = angle + toothHalf * 0.7;
                     pts.Add(new PointF(cx + (float)(Math.Cos(a3) * outerR), cy + (float)(Math.Sin(a3) * outerR)));
 
-                    // 齿槽终点
                     double a4 = angle + toothHalf * 1.5;
                     pts.Add(new PointF(cx + (float)(Math.Cos(a4) * innerR), cy + (float)(Math.Sin(a4) * innerR)));
                 }
@@ -202,10 +512,140 @@ namespace HuahuaHelper
                 }
             }
         }
+
+        /// <summary>
+        /// 16x16 细线放大镜图标
+        /// </summary>
+        public static void DrawVectorSearchIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f - 1.5f;
+            float cy = rect.Y + rect.Height / 2f - 1.5f;
+            float r = 4.2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                g.DrawEllipse(p, cx - r, cy - r, r * 2, r * 2);
+                g.DrawLine(p, cx + r * 0.7f, cy + r * 0.7f, cx + r + 3.5f, cy + r + 3.5f);
+            }
+        }
+
+        /// <summary>
+        /// 16x16 细线图片图标（山 + 太阳）
+        /// </summary>
+        public static void DrawVectorImageIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float x = rect.X + (rect.Width - 12f) / 2f;
+            float y = rect.Y + (rect.Height - 10f) / 2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                RectangleF box = new RectangleF(x, y, 12f, 10f);
+                using (GraphicsPath path = CreateRoundedPath(Rectangle.Round(box), 2))
+                {
+                    g.DrawPath(p, path);
+                }
+                g.DrawEllipse(p, x + 2.5f, y + 2.2f, 2f, 2f);
+                g.DrawLines(p, new PointF[]
+                {
+                    new PointF(x + 1.5f, y + 8.5f),
+                    new PointF(x + 4.8f, y + 5.5f),
+                    new PointF(x + 7.2f, y + 7.5f),
+                    new PointF(x + 9.2f, y + 5.0f),
+                    new PointF(x + 11.0f, y + 8.5f)
+                });
+            }
+        }
+
+        /// <summary>
+        /// 16x16 细线剪贴板图标
+        /// </summary>
+        public static void DrawVectorClipboardIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float x = rect.X + (rect.Width - 10f) / 2f;
+            float y = rect.Y + (rect.Height - 12f) / 2f + 1f;
+            using (Pen p = CreateIconPen(color))
+            {
+                g.DrawRectangle(p, x, y + 1.5f, 10f, 10.5f);
+                g.DrawRectangle(p, x + 2.5f, y, 5f, 2.5f);
+            }
+        }
+
+        /// <summary>
+        /// 16x16 细线备份/下载盒子图标
+        /// </summary>
+        public static void DrawVectorBackupIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                g.DrawLine(p, cx, cy - 5f, cx, cy + 2f);
+                g.DrawLines(p, new PointF[]
+                {
+                    new PointF(cx - 2.8f, cy - 0.5f),
+                    new PointF(cx, cy + 2.2f),
+                    new PointF(cx + 2.8f, cy - 0.5f)
+                });
+                g.DrawLines(p, new PointF[]
+                {
+                    new PointF(cx - 5f, cy + 2.5f),
+                    new PointF(cx - 5f, cy + 5f),
+                    new PointF(cx + 5f, cy + 5f),
+                    new PointF(cx + 5f, cy + 2.5f)
+                });
+            }
+        }
+
+        /// <summary>
+        /// 16x16 细线加号图标
+        /// </summary>
+        public static void DrawVectorPlusIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                g.DrawLine(p, cx - 4f, cy, cx + 4f, cy);
+                g.DrawLine(p, cx, cy - 4f, cx, cy + 4f);
+            }
+        }
+
+        /// <summary>
+        /// 16x16 细线减号图标
+        /// </summary>
+        public static void DrawVectorMinusIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                g.DrawLine(p, cx - 4f, cy, cx + 4f, cy);
+            }
+        }
+
+        /// <summary>
+        /// 16x16 细线铅笔编辑图标
+        /// </summary>
+        public static void DrawVectorEditIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                g.DrawLine(p, cx - 3.5f, cy + 3.5f, cx + 3.5f, cy - 3.5f);
+                g.DrawLine(p, cx - 3.5f, cy + 3.5f, cx - 4.2f, cy + 4.2f);
+                g.DrawLine(p, cx + 1.5f, cy - 3.8f, cx + 3.8f, cy - 1.5f);
+            }
+        }
     }
 
     /// <summary>
-    /// 自定义纯自绘分类导航栏（iOS 液体玻璃胶囊标签）
+    /// 自定义纯自绘分类导航栏（暖橙纸感胶囊 chip）
     /// </summary>
     public class CustomCategoryBar : Control
     {
@@ -223,14 +663,13 @@ namespace HuahuaHelper
         private int _hoverIndex = -1;
         private bool _hoverAddBtn = false;
         private bool _hoverDelBtn = false;
-        private Color _primaryOrange = Color.FromArgb(255, 80, 0);
 
         public CustomCategoryBar()
         {
             Categories = new List<string>();
             ActiveCategory = "全部";
             IsDarkTheme = false;
-            this.Height = 36;
+            this.Height = 40;
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.OptimizedDoubleBuffer |
                           ControlStyles.UserPaint |
@@ -259,25 +698,77 @@ namespace HuahuaHelper
 
         private int GetTotalWidth(Graphics g, Font font)
         {
-            int total = 10;
+            int total = 12;
             for (int i = 0; i < Categories.Count; i++)
             {
                 SizeF size = g.MeasureString(Categories[i], font);
-                total += (int)size.Width + 18;
+                total += (int)size.Width + 24;
             }
-            total += 60;
             return total;
         }
 
         private void ClampScroll()
         {
             using (Graphics g = this.CreateGraphics())
-            using (Font f = new Font("Microsoft YaHei UI", 8.5F))
+            using (Font f = new Font("Microsoft YaHei UI", 9F))
             {
                 int total = GetTotalWidth(g, f);
-                int maxScroll = Math.Max(0, total - this.ClientSize.Width);
+                int scrollAreaW = Math.Max(40, this.ClientSize.Width - 76);
+                int maxScroll = Math.Max(0, total - scrollAreaW);
                 if (_scrollX < -maxScroll) _scrollX = -maxScroll;
                 if (_scrollX > 0) _scrollX = 0;
+            }
+        }
+
+        private void CalculateHitBoxes(Graphics g, Font font, Font activeFont, out List<Rectangle> catRects, out Rectangle addRect, out Rectangle delRect)
+        {
+            catRects = new List<Rectangle>();
+            int curX = 12 + _scrollX;
+            for (int i = 0; i < Categories.Count; i++)
+            {
+                string cat = Categories[i];
+                bool isActive = (cat == ActiveCategory);
+                Font drawFont = isActive ? activeFont : font;
+                SizeF size = g.MeasureString(cat, drawFont);
+                int itemW = (int)size.Width + 18;
+                catRects.Add(new Rectangle(curX, 6, itemW, 28));
+                curX += itemW + 6;
+            }
+            // 固定在右侧，最窄窗口下也 100% 可见
+            int rightEdge = Math.Max(100, this.ClientSize.Width);
+            delRect = new Rectangle(rightEdge - 36, 6, 28, 28);
+            addRect = new Rectangle(rightEdge - 68, 6, 28, 28);
+        }
+
+        private void HitTest(Point pt, out int hitIdx, out bool hitAdd, out bool hitDel)
+        {
+            hitIdx = -1;
+            hitAdd = false;
+            hitDel = false;
+            using (Graphics g = this.CreateGraphics())
+            using (Font font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular))
+            using (Font activeFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold))
+            {
+                List<Rectangle> catRects;
+                Rectangle addRect, delRect;
+                CalculateHitBoxes(g, font, activeFont, out catRects, out addRect, out delRect);
+
+                // 优先命中右侧固定的 [+] [-] 按钮
+                if (addRect.Contains(pt)) { hitAdd = true; return; }
+                if (delRect.Contains(pt)) { hitDel = true; return; }
+
+                int clipRight = Math.Max(40, this.ClientSize.Width - 74);
+                if (pt.X < clipRight)
+                {
+                    for (int i = 0; i < catRects.Count; i++)
+                    {
+                        if (catRects[i].Contains(pt))
+                        {
+                            hitIdx = i;
+                            return;
+                        }
+                    }
+                }
             }
         }
 
@@ -286,33 +777,8 @@ namespace HuahuaHelper
             int prevIdx = _hoverIndex;
             bool prevAdd = _hoverAddBtn;
             bool prevDel = _hoverDelBtn;
-            _hoverIndex = -1;
-            _hoverAddBtn = false;
-            _hoverDelBtn = false;
 
-            using (Graphics g = this.CreateGraphics())
-            using (Font font = new Font("Microsoft YaHei UI", 8.5F))
-            {
-                int curX = 8 + _scrollX;
-                for (int i = 0; i < Categories.Count; i++)
-                {
-                    SizeF size = g.MeasureString(Categories[i], font);
-                    int itemW = (int)size.Width + 16;
-                    Rectangle rect = new Rectangle(curX, 5, itemW, 26);
-                    if (rect.Contains(e.Location))
-                    {
-                        _hoverIndex = i;
-                        break;
-                    }
-                    curX += itemW + 5;
-                }
-
-                Rectangle addRect = new Rectangle(curX, 5, 24, 25);
-                Rectangle delRect = new Rectangle(curX + 28, 5, 24, 25);
-
-                if (addRect.Contains(e.Location)) _hoverAddBtn = true;
-                else if (delRect.Contains(e.Location)) _hoverDelBtn = true;
-            }
+            HitTest(e.Location, out _hoverIndex, out _hoverAddBtn, out _hoverDelBtn);
 
             if (prevIdx != _hoverIndex || prevAdd != _hoverAddBtn || prevDel != _hoverDelBtn)
             {
@@ -322,21 +788,25 @@ namespace HuahuaHelper
 
         private void CustomCategoryBar_MouseDown(object sender, MouseEventArgs e)
         {
-            if (_hoverAddBtn && e.Button == MouseButtons.Left)
+            int hitIdx;
+            bool hitAdd, hitDel;
+            HitTest(e.Location, out hitIdx, out hitAdd, out hitDel);
+
+            if (hitAdd && e.Button == MouseButtons.Left)
             {
                 if (OnAddCategoryRequested != null) OnAddCategoryRequested();
                 return;
             }
 
-            if (_hoverDelBtn && e.Button == MouseButtons.Left)
+            if (hitDel && e.Button == MouseButtons.Left)
             {
                 if (OnDeleteCurrentCategoryRequested != null) OnDeleteCurrentCategoryRequested();
                 return;
             }
 
-            if (_hoverIndex >= 0 && _hoverIndex < Categories.Count)
+            if (hitIdx >= 0 && hitIdx < Categories.Count)
             {
-                string cat = Categories[_hoverIndex];
+                string cat = Categories[hitIdx];
                 if (e.Button == MouseButtons.Left)
                 {
                     ActiveCategory = cat;
@@ -346,9 +816,9 @@ namespace HuahuaHelper
                 else if (e.Button == MouseButtons.Right && cat != "全部")
                 {
                     ContextMenuStrip cms = new ContextMenuStrip();
-                    ToolStripMenuItem itemRename = new ToolStripMenuItem("✏️ 修改分类名称");
+                    ToolStripMenuItem itemRename = new ToolStripMenuItem("修改分类名称");
                     itemRename.Click += (s, ev) => { if (OnRenameCategoryRequested != null) OnRenameCategoryRequested(cat); };
-                    ToolStripMenuItem itemDel = new ToolStripMenuItem("🗑️ 删除此分类");
+                    ToolStripMenuItem itemDel = new ToolStripMenuItem("删除此分类");
                     itemDel.Click += (s, ev) => { if (OnDeleteCategoryRequested != null) OnDeleteCategoryRequested(cat); };
 
                     cms.Items.Add(itemRename);
@@ -365,8 +835,8 @@ namespace HuahuaHelper
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Color barBg = IsDarkTheme ? Color.FromArgb(32, 34, 38) : Color.White;
-            Color bottomLine = IsDarkTheme ? Color.FromArgb(48, 52, 60) : Color.FromArgb(235, 238, 243);
+            Color barBg = IsDarkTheme ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+            Color bottomLine = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
 
             g.Clear(barBg);
             using (Pen linePen = new Pen(bottomLine, 1))
@@ -374,63 +844,79 @@ namespace HuahuaHelper
                 g.DrawLine(linePen, 0, this.Height - 1, this.Width, this.Height - 1);
             }
 
-            using (Font font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Regular))
-            using (Font activeFont = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold))
+            using (Font font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular))
+            using (Font activeFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold))
             {
-                int curX = 8 + _scrollX;
+                List<Rectangle> catRects;
+                Rectangle addRect, delRect;
+                CalculateHitBoxes(g, font, activeFont, out catRects, out addRect, out delRect);
+
+                int clipRight = Math.Max(40, this.ClientSize.Width - 74);
+                g.SetClip(new Rectangle(0, 0, clipRight, this.Height));
+
                 for (int i = 0; i < Categories.Count; i++)
                 {
                     string cat = Categories[i];
                     bool isActive = (cat == ActiveCategory);
                     bool isHover = (i == _hoverIndex);
-
-                    Font drawFont = isActive ? activeFont : font;
-                    SizeF size = g.MeasureString(cat, drawFont);
-                    int itemW = (int)size.Width + 16;
-                    Rectangle rect = new Rectangle(curX, 5, itemW, 25);
+                    Rectangle rect = catRects[i];
 
                     if (isActive)
                     {
-                        // 选中的活力橙液体玻璃胶囊
-                        GlassRenderer.DrawLiquidGlassButton(g, rect,
-                            Color.FromArgb(255, 120, 30), Color.FromArgb(255, 75, 0),
-                            Color.FromArgb(255, 145, 60), isHover, 12);
+                        // 选中态：主色液态玻璃胶囊 chip
+                        GlassRenderer.DrawLiquidGlassButton(g, rect, WarmTheme.Orange, true, IsDarkTheme, isHover, false, 14);
                         TextRenderer.DrawText(g, cat, activeFont, rect, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                     }
                     else
                     {
-                        // 通透冰晶磨砂胶囊
-                        Color top = IsDarkTheme ? Color.FromArgb(50, 54, 62) : Color.FromArgb(252, 253, 255);
-                        Color btm = IsDarkTheme ? Color.FromArgb(40, 44, 52) : Color.FromArgb(242, 245, 250);
-                        Color bdr = IsDarkTheme ? Color.FromArgb(65, 70, 80) : Color.FromArgb(220, 225, 235);
-                        Color txt = IsDarkTheme ? Color.FromArgb(205, 210, 220) : Color.FromArgb(70, 75, 85);
+                        // 未选中态：白底（深色下透明）+ 1px 边框
+                        Color bgNormal = IsDarkTheme ? Color.Transparent : WarmTheme.LightCardBg;
+                        Color bgHover = IsDarkTheme ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg;
+                        Color bdr = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+                        Color txt = IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
 
-                        GlassRenderer.DrawLiquidGlassButton(g, rect, top, btm, bdr, isHover, 12);
+                        GlassRenderer.DrawLiquidGlassButton(g, rect, bgNormal, bgHover, bdr, isHover, 14);
                         TextRenderer.DrawText(g, cat, font, rect, txt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                     }
-
-                    curX += itemW + 5;
                 }
 
-                // [+] 增加分类液体玻璃按钮
-                Rectangle addRect = new Rectangle(curX, 5, 24, 25);
-                GlassRenderer.DrawLiquidGlassButton(g, addRect,
-                    Color.FromArgb(245, 248, 255), Color.FromArgb(235, 242, 252),
-                    Color.FromArgb(200, 220, 245), _hoverAddBtn, 6);
-                TextRenderer.DrawText(g, "+", activeFont, addRect, Color.FromArgb(50, 130, 245), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                g.ResetClip();
 
-                // [-] 删除分类液体玻璃按钮
-                Rectangle delRect = new Rectangle(curX + 28, 5, 24, 25);
-                GlassRenderer.DrawLiquidGlassButton(g, delRect,
-                    Color.FromArgb(255, 245, 245), Color.FromArgb(252, 235, 235),
-                    Color.FromArgb(245, 205, 205), _hoverDelBtn, 6);
-                TextRenderer.DrawText(g, "-", activeFont, delRect, Color.FromArgb(230, 50, 50), TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                // 用实底遮罩盖住右侧固定区，彻底避免左侧滚动文字/胶囊渗入 [+] [-] 下方
+                int dockLeft = Math.Max(40, this.ClientSize.Width - 74);
+                using (Brush maskBrush = new SolidBrush(barBg))
+                {
+                    g.FillRectangle(maskBrush, dockLeft, 0, this.ClientSize.Width - dockLeft, this.Height - 1);
+                }
+                using (Pen divPen = new Pen(bottomLine, 1))
+                {
+                    g.DrawLine(divPen, dockLeft, 6, dockLeft, this.Height - 7);
+                }
+
+                // [+] 增加分类：幽灵按钮 28x28，矢量加号
+                Color ghostBdr = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+                Color addHoverBg = IsDarkTheme ? WarmTheme.DarkRowHover : WarmTheme.LightRowHover;
+                Color addIconCol = _hoverAddBtn
+                    ? (IsDarkTheme ? WarmTheme.OrangeHover : WarmTheme.Orange)
+                    : (IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText);
+
+                GlassRenderer.DrawLiquidGlassButton(g, addRect, Color.Transparent, addHoverBg, ghostBdr, _hoverAddBtn, 6);
+                GlassRenderer.DrawVectorPlusIcon(g, addRect, addIconCol);
+
+                // [-] 删除分类：幽灵按钮 28x28，矢量减号，悬停变砖红
+                Color delHoverBg = IsDarkTheme ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226);
+                Color delIconCol = _hoverDelBtn
+                    ? WarmTheme.DangerRed
+                    : (IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText);
+
+                GlassRenderer.DrawLiquidGlassButton(g, delRect, Color.Transparent, delHoverBg, ghostBdr, _hoverDelBtn, 6);
+                GlassRenderer.DrawVectorMinusIcon(g, delRect, delIconCol);
             }
         }
     }
 
     /// <summary>
-    /// 支持 iOS 液体玻璃操作按键的工作区列表
+    /// 暖橙纸感工作区列表（双行密排、扁平实色按键、自绘细滚动条、空状态）
     /// </summary>
     public class MiniPhraseListView : Control
     {
@@ -439,12 +925,23 @@ namespace HuahuaHelper
         public float CustomFontSize { get; set; }
         public string ThemeType { get; set; }
         public Image CustomBgImage { get; set; }
+        public Image EmptyAvatarImage { get; set; }
 
         private int _hoverIndex = -1;
+        private int _selectedIndex = -1;
         private int _hoverBtnType = 0; // 0: 无, 1: 编辑, 2: 填入, 3: 发送
-        private VScrollBar _vScrollBar;
+        private int _scrollOffset = 0;
+        private bool _isDraggingScroll = false;
+        private int _dragStartY = 0;
+        private int _dragStartOffset = 0;
         private ToolTip _tip = new ToolTip();
         private int _lastTipIndex = -1;
+        private Bitmap _cachedBgBitmap = null;
+        private int _bgRenderVersion = 0;
+        private Font _titleFont;
+        private Font _secFont;
+        private Font _btnFont;
+        private Font _btnBoldFont;
 
         public event Action<PhraseItem, bool> OnActionTriggered;
         public event Action<PhraseItem> OnEditRequested;
@@ -455,25 +952,21 @@ namespace HuahuaHelper
             ItemHeight = 36;
             CustomFontSize = 9.0F;
             ThemeType = "white";
+            RebuildFonts();
 
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.OptimizedDoubleBuffer |
                           ControlStyles.UserPaint |
                           ControlStyles.ResizeRedraw, true);
 
-            _vScrollBar = new VScrollBar { Dock = DockStyle.Right, Visible = false, Width = 12 };
-            _vScrollBar.Scroll += (s, e) => { this.Invalidate(); };
-            this.Controls.Add(_vScrollBar);
-
             this.MouseWheel += (s, e) =>
             {
-                if (_vScrollBar.Visible)
+                int maxScroll = GetMaxScroll();
+                if (maxScroll > 0)
                 {
-                    int newVal = _vScrollBar.Value - (e.Delta / 120) * (ItemHeight);
-                    if (newVal < _vScrollBar.Minimum) newVal = _vScrollBar.Minimum;
-                    if (newVal > _vScrollBar.Maximum - _vScrollBar.LargeChange + 1)
-                        newVal = Math.Max(0, _vScrollBar.Maximum - _vScrollBar.LargeChange + 1);
-                    _vScrollBar.Value = newVal;
+                    _scrollOffset -= (e.Delta / 120) * ItemHeight;
+                    if (_scrollOffset < 0) _scrollOffset = 0;
+                    if (_scrollOffset > maxScroll) _scrollOffset = maxScroll;
                     this.Invalidate();
                 }
             };
@@ -481,13 +974,84 @@ namespace HuahuaHelper
             this.MouseMove += MiniPhraseListView_MouseMove;
             this.MouseLeave += (s, e) => { _hoverIndex = -1; _hoverBtnType = 0; _lastTipIndex = -1; _tip.Hide(this); this.Invalidate(); };
             this.MouseDown += MiniPhraseListView_MouseDown;
+            this.MouseUp += (s, e) => { _isDraggingScroll = false; };
             this.DoubleClick += MiniPhraseListView_DoubleClick;
+        }
+
+        private void RebuildFonts()
+        {
+            if (_titleFont != null) _titleFont.Dispose();
+            if (_secFont != null) _secFont.Dispose();
+            if (_btnFont == null) _btnFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular);
+            if (_btnBoldFont == null) _btnBoldFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+
+            _titleFont = new Font("Microsoft YaHei UI", CustomFontSize, FontStyle.Regular);
+            _secFont = new Font("Microsoft YaHei UI", GetSecondaryFontSize(CustomFontSize), FontStyle.Regular);
+        }
+
+        private void RebuildBgCacheAsync()
+        {
+            int w = this.ClientSize.Width;
+            int h = this.ClientSize.Height;
+            if (ThemeType != "custom" || CustomBgImage == null || w <= 0 || h <= 0)
+            {
+                if (_cachedBgBitmap != null) { _cachedBgBitmap.Dispose(); _cachedBgBitmap = null; }
+                return;
+            }
+
+            int version = ++_bgRenderVersion;
+            Image srcClone = null;
+            try { srcClone = (Image)CustomBgImage.Clone(); } catch { return; }
+            Color maskColor = Color.FromArgb(65, WarmTheme.LightPaperBg);
+
+            Task.Factory.StartNew(() =>
+            {
+                try
+                {
+                    Bitmap bmp = new Bitmap(w, h, PixelFormat.Format32bppPArgb);
+                    using (Graphics g = Graphics.FromImage(bmp))
+                    {
+                        DrawImageCover(g, srcClone, new Rectangle(0, 0, w, h), true);
+                        using (Brush mask = new SolidBrush(maskColor))
+                        {
+                            g.FillRectangle(mask, 0, 0, w, h);
+                        }
+                    }
+                    srcClone.Dispose();
+
+                    if (this.IsHandleCreated && !this.IsDisposed)
+                    {
+                        this.BeginInvoke((Action)(() =>
+                        {
+                            if (version == _bgRenderVersion && !this.IsDisposed)
+                            {
+                                if (_cachedBgBitmap != null) _cachedBgBitmap.Dispose();
+                                _cachedBgBitmap = bmp;
+                                this.Invalidate();
+                            }
+                            else
+                            {
+                                bmp.Dispose();
+                            }
+                        }));
+                    }
+                    else
+                    {
+                        bmp.Dispose();
+                    }
+                }
+                catch
+                {
+                    if (srcClone != null) srcClone.Dispose();
+                }
+            });
         }
 
         public void SetTheme(string theme, Image bgImg)
         {
             ThemeType = theme ?? "white";
             CustomBgImage = bgImg;
+            RebuildBgCacheAsync();
             this.Invalidate();
         }
 
@@ -495,65 +1059,106 @@ namespace HuahuaHelper
         {
             CustomFontSize = fontSize;
             ItemHeight = itemHeight;
-            UpdateScroll();
+            RebuildFonts();
+            ClampScroll();
             this.Invalidate();
         }
 
         public void UpdateData(List<PhraseItem> list)
         {
             Items = list ?? new List<PhraseItem>();
-            UpdateScroll();
+            _selectedIndex = -1;
+            ClampScroll();
             this.Invalidate();
         }
 
         protected override void OnResize(EventArgs e)
         {
             base.OnResize(e);
-            UpdateScroll();
+            ClampScroll();
+            RebuildBgCacheAsync();
         }
 
-        private void UpdateScroll()
+        private int GetMaxScroll()
         {
-            int total = Items.Count * ItemHeight;
-            if (total > this.ClientSize.Height)
-            {
-                _vScrollBar.Visible = true;
-                _vScrollBar.Minimum = 0;
-                _vScrollBar.Maximum = total;
-                _vScrollBar.LargeChange = this.ClientSize.Height;
-                _vScrollBar.SmallChange = ItemHeight;
-            }
-            else
-            {
-                _vScrollBar.Visible = false;
-                _vScrollBar.Value = 0;
-            }
+            return Math.Max(0, Items.Count * ItemHeight - this.ClientSize.Height);
         }
 
-        private int GetScrollOffset()
+        private void ClampScroll()
         {
-            return _vScrollBar.Visible ? _vScrollBar.Value : 0;
+            int maxScroll = GetMaxScroll();
+            if (_scrollOffset > maxScroll) _scrollOffset = maxScroll;
+            if (_scrollOffset < 0) _scrollOffset = 0;
+        }
+
+        private bool NeedsScrollBar()
+        {
+            return Items.Count * ItemHeight > this.ClientSize.Height;
+        }
+
+        private Rectangle GetScrollThumbRect()
+        {
+            int totalH = Items.Count * ItemHeight;
+            int viewH = this.ClientSize.Height;
+            if (totalH <= viewH || viewH <= 0) return Rectangle.Empty;
+
+            int thumbH = Math.Max(24, (int)((double)viewH * viewH / totalH));
+            int maxThumbY = viewH - thumbH;
+            int maxScroll = totalH - viewH;
+            int thumbY = maxScroll > 0 ? (int)((double)_scrollOffset / maxScroll * maxThumbY) : 0;
+            return new Rectangle(this.ClientSize.Width - 8, thumbY + 2, 5, Math.Max(18, thumbH - 4));
+        }
+
+        private float GetSecondaryFontSize(float titleSize)
+        {
+            if (titleSize >= 15.0F) return 11.0F;
+            if (titleSize >= 13.0F) return 10.0F;
+            if (titleSize >= 11.0F) return 9.0F;
+            return 8.0F;
         }
 
         private void MiniPhraseListView_MouseMove(object sender, MouseEventArgs e)
         {
-            int offset = GetScrollOffset();
+            if (_isDraggingScroll)
+            {
+                int totalH = Items.Count * ItemHeight;
+                int viewH = this.ClientSize.Height;
+                Rectangle thumb = GetScrollThumbRect();
+                int trackRange = Math.Max(1, viewH - thumb.Height);
+                int maxScroll = GetMaxScroll();
+                int deltaY = e.Y - _dragStartY;
+                _scrollOffset = _dragStartOffset + (int)((double)deltaY / trackRange * maxScroll);
+                ClampScroll();
+                this.Invalidate();
+                return;
+            }
+
+            if (Items.Count == 0)
+            {
+                _hoverIndex = -1;
+                _hoverBtnType = 0;
+                return;
+            }
+
+            int offset = _scrollOffset;
             int newIdx = (e.Y + offset) / ItemHeight;
+            int prevIdx = _hoverIndex;
+            int prevType = _hoverBtnType;
 
             if (newIdx >= 0 && newIdx < Items.Count)
             {
                 _hoverIndex = newIdx;
-                int rightMargin = _vScrollBar.Visible ? 14 : 2;
+                int rightMargin = NeedsScrollBar() ? 12 : 4;
                 int usableW = this.ClientSize.Width - rightMargin;
                 int itemY = (newIdx * ItemHeight) - offset;
 
-                int sendW = 34;
-                int fillW = 28;
+                int sendW = 36;
+                int fillW = 32;
                 int editW = 24;
-                int btnH = Math.Min(24, ItemHeight - 10);
+                int btnH = Math.Min(24, ItemHeight - 8);
                 int btnY = itemY + (ItemHeight - btnH) / 2;
 
-                int sendLeft = usableW - sendW - 4;
+                int sendLeft = usableW - sendW - 8;
                 int fillLeft = sendLeft - fillW - 4;
                 int editLeft = fillLeft - editW - 4;
 
@@ -561,7 +1166,6 @@ namespace HuahuaHelper
                 Rectangle rFill = new Rectangle(fillLeft, btnY, fillW, btnH);
                 Rectangle rEdit = new Rectangle(editLeft, btnY, editW, btnH);
 
-                int prevType = _hoverBtnType;
                 if (rSend.Contains(e.Location)) _hoverBtnType = 3;
                 else if (rFill.Contains(e.Location)) _hoverBtnType = 2;
                 else if (rEdit.Contains(e.Location)) _hoverBtnType = 1;
@@ -571,11 +1175,11 @@ namespace HuahuaHelper
                 {
                     _lastTipIndex = newIdx;
                     var item = Items[newIdx];
-                    string imgTip = string.IsNullOrEmpty(item.ImagePath) ? "" : "\n🖼️ 附带图片: 已包含图片（先发字后发图）";
-                    _tip.SetToolTip(this, string.Format("【{0}】{1}\n{2}\n\n💡 提示：双击该行或点击【发】直接发出", item.Title, imgTip, item.Content));
+                    string imgTip = string.IsNullOrEmpty(item.ImagePath) ? "" : "\n带图 · 先发文字再发图片";
+                    _tip.SetToolTip(this, string.Format("{0}{1}\n{2}\n\n双击该行或点「发」直接发出", item.Title, imgTip, item.Content));
                 }
 
-                if (prevType != _hoverBtnType) this.Invalidate();
+                if (prevIdx != _hoverIndex || prevType != _hoverBtnType) this.Invalidate();
             }
             else
             {
@@ -583,15 +1187,29 @@ namespace HuahuaHelper
                 _hoverBtnType = 0;
                 _lastTipIndex = -1;
                 _tip.Hide(this);
-                this.Invalidate();
+                if (prevIdx != -1 || prevType != 0) this.Invalidate();
             }
         }
 
         private void MiniPhraseListView_MouseDown(object sender, MouseEventArgs e)
         {
             if (e.Button != MouseButtons.Left) return;
+
+            if (NeedsScrollBar() && e.X >= this.ClientSize.Width - 12)
+            {
+                Rectangle thumb = GetScrollThumbRect();
+                if (thumb.Contains(e.Location))
+                {
+                    _isDraggingScroll = true;
+                    _dragStartY = e.Y;
+                    _dragStartOffset = _scrollOffset;
+                    return;
+                }
+            }
+
             if (_hoverIndex >= 0 && _hoverIndex < Items.Count)
             {
+                _selectedIndex = _hoverIndex;
                 var item = Items[_hoverIndex];
                 if (_hoverBtnType == 3)
                 {
@@ -605,6 +1223,7 @@ namespace HuahuaHelper
                 {
                     if (OnEditRequested != null) OnEditRequested(item);
                 }
+                this.Invalidate();
             }
         }
 
@@ -615,6 +1234,28 @@ namespace HuahuaHelper
                 var item = Items[_hoverIndex];
                 if (OnActionTriggered != null) OnActionTriggered(item, true);
             }
+        }
+
+        private void DrawImageCover(Graphics g, Image img, Rectangle target, bool highQuality)
+        {
+            if (img == null || target.Width <= 0 || target.Height <= 0) return;
+            float imgRatio = (float)img.Width / img.Height;
+            float targetRatio = (float)target.Width / target.Height;
+            RectangleF srcRect;
+            if (imgRatio > targetRatio)
+            {
+                float srcW = img.Height * targetRatio;
+                float srcX = (img.Width - srcW) / 2f;
+                srcRect = new RectangleF(srcX, 0, srcW, img.Height);
+            }
+            else
+            {
+                float srcH = img.Width / targetRatio;
+                float srcY = (img.Height - srcH) / 2f;
+                srcRect = new RectangleF(0, srcY, img.Width, srcH);
+            }
+            g.InterpolationMode = highQuality ? InterpolationMode.HighQualityBicubic : InterpolationMode.Low;
+            g.DrawImage(img, target, srcRect, GraphicsUnit.Pixel);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -628,35 +1269,82 @@ namespace HuahuaHelper
 
             if (isDark)
             {
-                g.Clear(Color.FromArgb(24, 25, 28));
+                g.Clear(WarmTheme.DarkPaperBg);
             }
             else if (ThemeType == "custom" && CustomBgImage != null)
             {
-                g.DrawImage(CustomBgImage, new Rectangle(0, 0, this.Width, this.Height));
-                using (Brush mask = new SolidBrush(Color.FromArgb(160, 255, 255, 255)))
+                if (_cachedBgBitmap != null && _cachedBgBitmap.Width == this.ClientSize.Width && _cachedBgBitmap.Height == this.ClientSize.Height)
                 {
-                    g.FillRectangle(mask, this.ClientRectangle);
+                    g.DrawImageUnscaled(_cachedBgBitmap, 0, 0);
+                }
+                else
+                {
+                    DrawImageCover(g, CustomBgImage, this.ClientRectangle, false);
+                    using (Brush mask = new SolidBrush(Color.FromArgb(65, WarmTheme.LightPaperBg)))
+                    {
+                        g.FillRectangle(mask, this.ClientRectangle);
+                    }
                 }
             }
             else
             {
-                g.Clear(Color.White);
+                g.Clear(WarmTheme.LightPaperBg);
             }
 
-            int offset = GetScrollOffset();
+            // 空状态绘制（居中显示花花头像小图 + 提示语）
+            if (Items.Count == 0)
+            {
+                int cy = this.ClientSize.Height / 2;
+                int cx = this.ClientSize.Width / 2;
+                if (EmptyAvatarImage != null)
+                {
+                    Rectangle imgRect = new Rectangle(cx - 24, cy - 42, 48, 48);
+                    if (WarmTheme.Current.IsPink)
+                    {
+                        using (GraphicsPath clip = new GraphicsPath())
+                        {
+                            clip.AddEllipse(imgRect);
+                            g.SetClip(clip);
+                            g.DrawImage(EmptyAvatarImage, imgRect);
+                            g.ResetClip();
+                        }
+                        using (Pen ringPen = new Pen(WarmTheme.Orange, 2))
+                        {
+                            g.DrawEllipse(ringPen, imgRect);
+                        }
+                    }
+                    else
+                    {
+                        g.DrawImage(EmptyAvatarImage, imgRect);
+                    }
+                }
+                Color emptyTextCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+                Rectangle txtRect = new Rectangle(12, cy + 14, this.ClientSize.Width - 24, 24);
+                using (Font emptyFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular))
+                {
+                    TextRenderer.DrawText(g, "还没有话术，点右上角加一个吧", emptyFont, txtRect, emptyTextCol,
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+                return;
+            }
+
+            int offset = _scrollOffset;
             int start = Math.Max(0, offset / ItemHeight);
             int count = (this.ClientSize.Height / ItemHeight) + 2;
             int end = Math.Min(Items.Count - 1, start + count);
 
-            int rightMargin = _vScrollBar.Visible ? 14 : 2;
+            int rightMargin = NeedsScrollBar() ? 12 : 4;
             int usableW = this.ClientSize.Width - rightMargin;
 
-            Color textPrimary = isDark ? Color.FromArgb(235, 238, 245) : Color.FromArgb(42, 45, 52);
-            Color rowLine = isDark ? Color.FromArgb(42, 45, 52) : Color.FromArgb(244, 246, 250);
+            Color textPrimary = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+            Color textSecondary = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+            Color rowLine = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
 
-            using (Font titleFont = new Font("Microsoft YaHei UI", CustomFontSize, FontStyle.Regular))
-            using (Font btnFont = new Font("Microsoft YaHei UI", 8F, FontStyle.Regular))
-            using (Font btnBoldFont = new Font("Microsoft YaHei UI", 8F, FontStyle.Bold))
+            Font titleFont = _titleFont;
+            Font secFont = _secFont;
+            Font btnFont = _btnFont;
+            Font btnBoldFont = _btnBoldFont;
+
             using (Pen linePen = new Pen(rowLine, 1))
             {
                 for (int i = start; i <= end; i++)
@@ -664,37 +1352,55 @@ namespace HuahuaHelper
                     var item = Items[i];
                     int y = (i * ItemHeight) - offset;
                     bool isHover = (i == _hoverIndex);
+                    bool isSelected = (i == _selectedIndex);
 
-                    Rectangle rowRect = new Rectangle(2, y + 1, usableW - 2, ItemHeight - 2);
+                    Rectangle rowRect = new Rectangle(4, y + 1, usableW - 6, ItemHeight - 2);
 
-                    // 行背景
+                    // 行背景（白底 / 深暖灰，悬停暖橙 tint）
                     Color rowBg;
                     if (isDark)
                     {
-                        rowBg = isHover ? Color.FromArgb(40, 44, 52) : Color.FromArgb(28, 30, 34);
+                        if (isSelected) rowBg = WarmTheme.DarkRowSelected;
+                        else if (isHover) rowBg = WarmTheme.DarkRowHover;
+                        else rowBg = WarmTheme.DarkCardBg;
                     }
                     else if (ThemeType == "custom")
                     {
-                        rowBg = isHover ? Color.FromArgb(230, 255, 255, 255) : Color.FromArgb(180, 255, 255, 255);
+                        if (isSelected) rowBg = Color.FromArgb(230, WarmTheme.LightRowSelected);
+                        else if (isHover) rowBg = Color.FromArgb(215, WarmTheme.LightRowHover);
+                        else rowBg = Color.FromArgb(155, WarmTheme.LightCardBg);
                     }
                     else
                     {
-                        rowBg = isHover ? Color.FromArgb(254, 248, 244) : Color.White;
+                        if (isSelected) rowBg = WarmTheme.LightRowSelected;
+                        else if (isHover) rowBg = WarmTheme.LightRowHover;
+                        else rowBg = WarmTheme.LightCardBg;
                     }
 
-                    using (Brush bgBrush = new SolidBrush(rowBg))
+                    if (isHover || isSelected)
                     {
-                        g.FillRectangle(bgBrush, rowRect);
+                        using (GraphicsPath rowPath = GlassRenderer.CreateRoundedPath(rowRect, 4))
+                        using (Brush bgBrush = new SolidBrush(rowBg))
+                        {
+                            g.FillPath(bgBrush, rowPath);
+                        }
                     }
-                    g.DrawLine(linePen, 4, y + ItemHeight - 1, usableW, y + ItemHeight - 1);
+                    else
+                    {
+                        using (Brush bgBrush = new SolidBrush(rowBg))
+                        {
+                            g.FillRectangle(bgBrush, rowRect);
+                        }
+                    }
+                    g.DrawLine(linePen, 12, y + ItemHeight - 1, usableW - 4, y + ItemHeight - 1);
 
-                    int sendW = 34;
-                    int fillW = 28;
+                    int sendW = 36;
+                    int fillW = 32;
                     int editW = 24;
-                    int btnH = Math.Min(24, ItemHeight - 10);
+                    int btnH = Math.Min(24, ItemHeight - 8);
                     int btnY = y + (ItemHeight - btnH) / 2;
 
-                    int sendLeft = usableW - sendW - 4;
+                    int sendLeft = usableW - sendW - 8;
                     int fillLeft = sendLeft - fillW - 4;
                     int editLeft = fillLeft - editW - 4;
 
@@ -702,47 +1408,78 @@ namespace HuahuaHelper
                     Rectangle rFill = new Rectangle(fillLeft, btnY, fillW, btnH);
                     Rectangle rEdit = new Rectangle(editLeft, btnY, editW, btnH);
 
-                    int textLeft = 10;
-                    int textW = editLeft - textLeft - 4;
-                    Rectangle textRect = new Rectangle(textLeft, y, textW, ItemHeight);
+                    int textLeft = 12;
+                    int textW = editLeft - textLeft - 6;
+                    int line1H = (int)Math.Ceiling(titleFont.GetHeight(g));
+                    int line2H = (int)Math.Ceiling(secFont.GetHeight(g));
+                    int totalTxtH = line1H + line2H;
+                    int txtStartY = y + Math.Max(2, (ItemHeight - totalTxtH) / 2);
 
-                    TextRenderer.DrawText(g, item.Title, titleFont, textRect, textPrimary,
+                    Rectangle titleRect = new Rectangle(textLeft, txtStartY, textW, line1H);
+                    Rectangle secRect = new Rectangle(textLeft, txtStartY + line1H, textW, line2H);
+
+                    TextRenderer.DrawText(g, item.Title, titleFont, titleRect, textPrimary,
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
 
-                    // 1. 【✏️】iOS 液体玻璃按钮
+                    string subInfo = string.IsNullOrEmpty(item.Category) ? "未分类" : item.Category;
+                    if (!string.IsNullOrEmpty(item.ImagePath)) subInfo += " · 带图";
+                    TextRenderer.DrawText(g, subInfo, secFont, secRect, textSecondary,
+                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+
+                    // 次按钮通用色（白底 / 深暖灰，1px 暖边框）
+                    Color secNormal = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+                    Color secHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg;
+                    Color secBdr = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+                    Color secTxt = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+
+                    // 1. 编辑按钮（矢量铅笔图标）
                     bool hoverEdit = (isHover && _hoverBtnType == 1);
-                    Color ebTop = isDark ? Color.FromArgb(55, 60, 70) : Color.FromArgb(252, 253, 255);
-                    Color ebBtm = isDark ? Color.FromArgb(42, 46, 54) : Color.FromArgb(238, 242, 248);
-                    Color ebBdr = isDark ? Color.FromArgb(70, 75, 88) : Color.FromArgb(215, 222, 234);
-                    Color ebTxt = isDark ? Color.FromArgb(190, 195, 205) : Color.FromArgb(85, 90, 100);
+                    GlassRenderer.DrawLiquidGlassButton(g, rEdit, secNormal, secHover, secBdr, hoverEdit, 6);
+                    GlassRenderer.DrawVectorEditIcon(g, rEdit, isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText);
 
-                    GlassRenderer.DrawLiquidGlassButton(g, rEdit, ebTop, ebBtm, ebBdr, hoverEdit, 5);
-                    TextRenderer.DrawText(g, "✏️", btnFont, rEdit, ebTxt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-
-                    // 2. 【填】iOS 液体玻璃胶囊按钮
+                    // 2. 填入按钮
                     bool hoverFill = (isHover && _hoverBtnType == 2);
-                    GlassRenderer.DrawLiquidGlassButton(g, rFill, ebTop, ebBtm, ebBdr, hoverFill, 5);
-                    TextRenderer.DrawText(g, "填", btnFont, rFill, ebTxt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    GlassRenderer.DrawLiquidGlassButton(g, rFill, secNormal, secHover, secBdr, hoverFill, 6);
+                    TextRenderer.DrawText(g, "填", btnFont, rFill, secTxt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
 
-                    // 3. 【发】阿里活力橙·琥珀水晶液体玻璃宝石按钮
+                    // 3. 发送按钮（iOS 26 Liquid Glass 主按钮）
                     bool hoverSend = (isHover && _hoverBtnType == 3);
                     GlassRenderer.DrawLiquidGlassButton(g, rSend,
-                        Color.FromArgb(255, 125, 35), Color.FromArgb(255, 75, 0),
-                        Color.FromArgb(255, 150, 70), hoverSend, 6);
+                        WarmTheme.Orange, true, isDark, hoverSend, false, 6);
                     TextRenderer.DrawText(g, "发", btnBoldFont, rSend, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                }
+            }
+
+            // 细滚动条滑块
+            if (NeedsScrollBar())
+            {
+                Rectangle thumb = GetScrollThumbRect();
+                if (!thumb.IsEmpty)
+                {
+                    Color thumbCol = isDark ? WarmTheme.DarkScrollThumb : WarmTheme.LightScrollThumb;
+                    using (GraphicsPath thumbPath = GlassRenderer.CreateRoundedPath(thumb, 2))
+                    using (Brush thumbBrush = new SolidBrush(thumbCol))
+                    {
+                        g.FillPath(thumbBrush, thumbPath);
+                    }
                 }
             }
         }
     }
 
     /// <summary>
-    /// 自绘制的 iOS 液体玻璃独立按钮控件（用于顶栏）
+    /// 扁平实色/幽灵独立按钮控件（用于顶栏与弹窗）
     /// </summary>
     public class LiquidGlassButtonControl : Control
     {
         public bool IsHovered { get; private set; }
-        public Color BaseTop { get; set; }
-        public Color BaseBottom { get; set; }
+        public bool IsPressed { get; private set; }
+        public bool UseLiquidGlass { get; set; }
+        public bool IsPrimaryGlass { get; set; }
+        public bool IsDarkTheme { get; set; }
+        public Color BaseNormal { get; set; }
+        public Color BaseHover { get; set; }
+        public Color BasePressed { get; set; }
         public Color BorderColor { get; set; }
         public Color TextColor { get; set; }
         public bool IsGearIcon { get; set; }
@@ -753,17 +1490,21 @@ namespace HuahuaHelper
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.OptimizedDoubleBuffer |
                           ControlStyles.UserPaint |
-                          ControlStyles.ResizeRedraw, true);
+                          ControlStyles.ResizeRedraw |
+                          ControlStyles.SupportsTransparentBackColor, true);
 
-            BaseTop = Color.FromArgb(252, 253, 255);
-            BaseBottom = Color.FromArgb(238, 242, 248);
-            BorderColor = Color.FromArgb(215, 222, 234);
-            TextColor = Color.FromArgb(70, 75, 85);
+            BaseNormal = WarmTheme.LightCardBg;
+            BaseHover = WarmTheme.LightSearchBg;
+            BasePressed = WarmTheme.LightDivider;
+            BorderColor = WarmTheme.LightBorder;
+            TextColor = WarmTheme.LightChipText;
             CornerRadius = 6;
             this.Cursor = Cursors.Hand;
 
             this.MouseEnter += (s, e) => { IsHovered = true; this.Invalidate(); };
-            this.MouseLeave += (s, e) => { IsHovered = false; this.Invalidate(); };
+            this.MouseLeave += (s, e) => { IsHovered = false; IsPressed = false; this.Invalidate(); };
+            this.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { IsPressed = true; this.Invalidate(); } };
+            this.MouseUp += (s, e) => { IsPressed = false; this.Invalidate(); };
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -772,11 +1513,18 @@ namespace HuahuaHelper
             Graphics g = e.Graphics;
             Rectangle rect = new Rectangle(1, 1, this.Width - 2, this.Height - 2);
 
-            GlassRenderer.DrawLiquidGlassButton(g, rect, BaseTop, BaseBottom, BorderColor, IsHovered, CornerRadius);
+            if (UseLiquidGlass)
+            {
+                Color accent = IsPrimaryGlass ? BaseNormal : BorderColor;
+                GlassRenderer.DrawLiquidGlassButton(g, rect, accent, IsPrimaryGlass, IsDarkTheme, IsHovered, IsPressed, CornerRadius);
+            }
+            else
+            {
+                GlassRenderer.DrawLiquidGlassButton(g, rect, BaseNormal, BaseHover, BorderColor, IsHovered, CornerRadius, IsPressed, BasePressed);
+            }
 
             if (IsGearIcon)
             {
-                // 绘制纯矢量抗锯齿高清齿轮图标
                 GlassRenderer.DrawVectorGearIcon(g, rect, TextColor);
             }
             else
@@ -817,10 +1565,13 @@ namespace HuahuaHelper
         private Panel _topBar;
         private PictureBox _picAvatar;
         private Label _lblLogo;
-        private LiquidGlassButtonControl _btnSettings; // iOS 液体玻璃矢量齿轮按钮
+        private LiquidGlassButtonControl _btnSettings; // 幽灵矢量齿轮按钮
         private CheckBox _chkTopMost;
-        private LiquidGlassButtonControl _btnAddPhrase; // iOS 液体玻璃橙色宝石按钮
+        private LiquidGlassButtonControl _btnAddPhrase; // 实色淘宝橙按钮
+        private Panel _searchWrap;
         private TextBox _searchBox;
+        private bool _searchFocused = false;
+        private const string SearchPlaceholder = "搜话术、分类…";
         private CustomCategoryBar _categoryBar;
         private MiniPhraseListView _phraseList;
         private Panel _statusBar;
@@ -909,62 +1660,92 @@ namespace HuahuaHelper
         private void InitializeUi()
         {
             this.Text = "客服花花";
-            // 默认宽度优化为舒适的 320px
             this.Size = new Size(320, 680);
-            this.MinimumSize = new Size(270, 400);
+            this.MinimumSize = new Size(292, 400);
             this.StartPosition = FormStartPosition.Manual;
 
             Rectangle workArea = Screen.PrimaryScreen.WorkingArea;
             this.Location = new Point(workArea.Right - 335, (workArea.Height - 680) / 2);
             this.TopMost = true;
-            this.BackColor = Color.White;
+            this.BackColor = WarmTheme.LightPaperBg;
             this.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
 
+            EmbeddedAssets.EnsureIcon(_iconPath);
             if (File.Exists(_iconPath))
             {
                 try { this.Icon = new Icon(_iconPath); } catch { }
             }
 
-            // 1. 顶部 Header
+            // 1. 顶部 Header（实色底 + 1px 底线）
             _topBar = new Panel
             {
                 Dock = DockStyle.Top,
-                Height = 68,
-                BackColor = Color.White,
-                Padding = new Padding(6, 6, 6, 4)
+                Height = 72,
+                BackColor = WarmTheme.LightCardBg,
+                Padding = new Padding(12, 6, 12, 6)
+            };
+            _topBar.Paint += (s, e) =>
+            {
+                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                GlassRenderer.DrawLiquidGlassPanel(e.Graphics, _topBar.ClientRectangle, isDark, 0);
+                Color lineCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+                using (Pen p = new Pen(lineCol, 1))
+                {
+                    e.Graphics.DrawLine(p, 0, _topBar.Height - 1, _topBar.Width, _topBar.Height - 1);
+                }
             };
 
             // 头像彩蛋
             _picAvatar = new PictureBox
             {
                 Size = new Size(24, 24),
-                Location = new Point(8, 7),
+                Location = new Point(12, 8),
                 SizeMode = PictureBoxSizeMode.Zoom,
                 Cursor = Cursors.Hand
             };
             ToolTip tip = new ToolTip();
-            tip.SetToolTip(_picAvatar, "✨ 点击查看软件原图 (彩蛋)");
+            tip.SetToolTip(_picAvatar, "点一点，看花花的原画");
             _picAvatar.Image = EmbeddedAssets.GetAvatarImage(_avatarPath);
+            _picAvatar.Paint += (s, e) =>
+            {
+                if (WarmTheme.Current.IsPink && _picAvatar.Image != null)
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    Rectangle r = new Rectangle(1, 1, _picAvatar.Width - 3, _picAvatar.Height - 3);
+                    using (Pen ringPen = new Pen(WarmTheme.Orange, 2))
+                    {
+                        e.Graphics.DrawEllipse(ringPen, r);
+                    }
+                }
+            };
             _picAvatar.Click += (s, e) => ShowEasterEggDialog();
 
             _lblLogo = new Label
             {
                 Text = "客服花花",
                 Font = new Font("Microsoft YaHei UI", 10.5F, FontStyle.Bold),
-                ForeColor = _primaryOrange,
-                Location = new Point(35, 7),
+                ForeColor = WarmTheme.LightTextPrimary,
+                Location = new Point(40, 9),
+                Padding = new Padding(0),
+                Margin = new Padding(0),
                 AutoSize = true
             };
 
-            // 【设置】iOS 液体玻璃矢量高清齿轮按钮（无 emoji 跨系统排版 Bug）
+            // 【设置】iOS 26 Liquid Glass 矢量齿轮按钮
             _btnSettings = new LiquidGlassButtonControl
             {
-                Size = new Size(30, 24),
+                Size = new Size(28, 24),
                 IsGearIcon = true,
+                UseLiquidGlass = true,
+                IsPrimaryGlass = false,
                 CornerRadius = 6,
-                TextColor = Color.FromArgb(80, 85, 95)
+                BaseNormal = Color.Transparent,
+                BaseHover = WarmTheme.LightSearchBg,
+                BasePressed = WarmTheme.LightDivider,
+                BorderColor = WarmTheme.LightBorder,
+                TextColor = WarmTheme.LightChipText
             };
-            tip.SetToolTip(_btnSettings, "系统设置（背景、字体、备份恢复）");
+            tip.SetToolTip(_btnSettings, "设置");
             _btnSettings.Click += (s, e) => OpenSettingsDialog();
 
             _chkTopMost = new CheckBox
@@ -973,48 +1754,110 @@ namespace HuahuaHelper
                 Checked = true,
                 AutoSize = true,
                 Cursor = Cursors.Hand,
-                Font = new Font("Microsoft YaHei UI", 8.5F)
+                Font = new Font("Microsoft YaHei UI", 8.5F),
+                ForeColor = WarmTheme.LightTextPrimary
             };
             _chkTopMost.CheckedChanged += (s, e) => this.TopMost = _chkTopMost.Checked;
 
-            // 【+词】iOS 液体玻璃宝石按钮
+            // 【+词】iOS 26 Liquid Glass 主按钮
             _btnAddPhrase = new LiquidGlassButtonControl
             {
                 Text = "+词",
                 Size = new Size(44, 24),
-                Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold),
-                BaseTop = Color.FromArgb(255, 125, 35),
-                BaseBottom = Color.FromArgb(255, 75, 0),
-                BorderColor = Color.FromArgb(255, 150, 70),
+                Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+                UseLiquidGlass = true,
+                IsPrimaryGlass = true,
+                BaseNormal = WarmTheme.Orange,
+                BaseHover = WarmTheme.OrangeHover,
+                BasePressed = WarmTheme.OrangePressed,
+                BorderColor = WarmTheme.Orange,
                 TextColor = Color.White,
                 CornerRadius = 6
             };
             _btnAddPhrase.Click += (s, e) => ShowAddOrEditDialog(null);
 
-            // 第二行：搜索框
+            // 第二行：自绘圆角搜索框（底色 #F5F1EA，16x16 矢量放大镜，2px 焦点环）
+            _searchWrap = new Panel
+            {
+                Location = new Point(12, 38),
+                Size = new Size(280, 26),
+                BackColor = Color.Transparent
+            };
+            _searchWrap.Paint += (s, e) =>
+            {
+                Graphics g = e.Graphics;
+                g.SmoothingMode = SmoothingMode.AntiAlias;
+                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                Color bgCol = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightSearchBg;
+                Color iconCol = isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
+
+                Rectangle boxRect = new Rectangle(1, 1, _searchWrap.Width - 3, _searchWrap.Height - 3);
+                using (GraphicsPath path = GlassRenderer.CreateRoundedPath(boxRect, 6))
+                using (Brush b = new SolidBrush(bgCol))
+                {
+                    g.FillPath(b, path);
+                }
+
+                if (_searchFocused)
+                {
+                    using (GraphicsPath fPath = GlassRenderer.CreateRoundedPath(boxRect, 6))
+                    using (Pen fPen = new Pen(WarmTheme.FocusRing, 2))
+                    {
+                        g.DrawPath(fPen, fPath);
+                    }
+                }
+                else if (isDark)
+                {
+                    using (GraphicsPath bPath = GlassRenderer.CreateRoundedPath(boxRect, 6))
+                    using (Pen bPen = new Pen(WarmTheme.DarkDivider, 1))
+                    {
+                        g.DrawPath(bPen, bPath);
+                    }
+                }
+
+                GlassRenderer.DrawVectorSearchIcon(g, new Rectangle(6, 5, 16, 16), iconCol);
+            };
+
             _searchBox = new TextBox
             {
-                Location = new Point(8, 36),
-                Size = new Size(285, 24),
+                Location = new Point(26, 5),
+                Size = new Size(246, 18),
+                BorderStyle = BorderStyle.None,
+                BackColor = WarmTheme.LightSearchBg,
                 Font = new Font("Microsoft YaHei UI", 9F),
-                ForeColor = Color.Gray,
-                Text = "🔍 搜索提示词..."
+                ForeColor = WarmTheme.LightTextMuted,
+                Text = SearchPlaceholder
             };
             _searchBox.Enter += (s, e) => {
-                if (_searchBox.Text.StartsWith("🔍")) { _searchBox.Text = ""; _searchBox.ForeColor = Color.Black; }
+                _searchFocused = true;
+                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                if (_searchBox.Text == SearchPlaceholder)
+                {
+                    _searchBox.Text = "";
+                    _searchBox.ForeColor = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+                }
+                _searchWrap.Invalidate();
             };
             _searchBox.Leave += (s, e) => {
-                if (string.IsNullOrWhiteSpace(_searchBox.Text)) { _searchBox.Text = "🔍 搜索提示词..."; _searchBox.ForeColor = Color.Gray; }
+                _searchFocused = false;
+                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                if (string.IsNullOrWhiteSpace(_searchBox.Text))
+                {
+                    _searchBox.Text = SearchPlaceholder;
+                    _searchBox.ForeColor = isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
+                }
+                _searchWrap.Invalidate();
             };
             _searchBox.TextChanged += (s, e) => RefreshList();
+            _searchWrap.Controls.Add(_searchBox);
 
-            _topBar.Controls.AddRange(new Control[] { _picAvatar, _lblLogo, _btnSettings, _chkTopMost, _btnAddPhrase, _searchBox });
+            _topBar.Controls.AddRange(new Control[] { _picAvatar, _lblLogo, _btnSettings, _chkTopMost, _btnAddPhrase, _searchWrap });
 
             // 2. 分类导航条
             _categoryBar = new CustomCategoryBar
             {
                 Dock = DockStyle.Top,
-                Height = 36
+                Height = 40
             };
             _categoryBar.OnCategorySelected += (cat) => { _currentCat = cat; RefreshList(); };
             _categoryBar.OnAddCategoryRequested += () => AddCategoryPrompt();
@@ -1026,7 +1869,8 @@ namespace HuahuaHelper
             _phraseList = new MiniPhraseListView
             {
                 Dock = DockStyle.Fill,
-                BackColor = Color.White
+                BackColor = WarmTheme.LightPaperBg,
+                EmptyAvatarImage = _picAvatar.Image
             };
             _phraseList.OnActionTriggered += (item, isSend) => SendToTarget(item, isSend);
             _phraseList.OnEditRequested += (item) => ShowAddOrEditDialog(item);
@@ -1036,16 +1880,25 @@ namespace HuahuaHelper
             {
                 Dock = DockStyle.Bottom,
                 Height = 22,
-                BackColor = Color.FromArgb(242, 244, 248),
-                Padding = new Padding(6, 3, 6, 2)
+                BackColor = WarmTheme.LightPaperBg,
+                Padding = new Padding(12, 3, 12, 2)
+            };
+            _statusBar.Paint += (s, e) =>
+            {
+                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                Color lineCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+                using (Pen p = new Pen(lineCol, 1))
+                {
+                    e.Graphics.DrawLine(p, 0, 0, _statusBar.Width, 0);
+                }
             };
             _lblTarget = new Label
             {
-                Text = "🎯 目标: 请先点击千牛聊天框",
+                Text = "目标: 请先点击千牛聊天框",
                 AutoSize = true,
                 Dock = DockStyle.Left,
-                Font = new Font("Microsoft YaHei UI", 7.5F),
-                ForeColor = Color.FromArgb(120, 125, 135)
+                Font = new Font("Microsoft YaHei UI", 8F),
+                ForeColor = WarmTheme.LightTextSecondary
             };
             _statusBar.Controls.Add(_lblTarget);
 
@@ -1054,14 +1907,18 @@ namespace HuahuaHelper
             this.Controls.Add(_topBar);
             this.Controls.Add(_statusBar);
 
-            // 绝对排版：保证一打开立刻完整显示 [⚙️设置] [☑置顶] [+词]，且绝无遮挡！
+            // 排版：左右内边距 12px，动态定位确保设置图标永不被遮挡
             Action updateLayout = () =>
             {
                 int w = this.ClientSize.Width;
-                _btnAddPhrase.Location = new Point(w - 52, 6);
-                _chkTopMost.Location = new Point(_btnAddPhrase.Left - 54, 9);
-                _btnSettings.Location = new Point(_chkTopMost.Left - 36, 6);
-                _searchBox.Width = w - 16;
+                _btnAddPhrase.Location = new Point(w - 54, 8);
+                _chkTopMost.Location = new Point(_btnAddPhrase.Left - _chkTopMost.Width - 6, 11);
+                _btnSettings.Location = new Point(_chkTopMost.Left - _btnSettings.Width - 6, 8);
+                _btnSettings.BringToFront();
+                _chkTopMost.BringToFront();
+                _btnAddPhrase.BringToFront();
+                _searchWrap.Width = w - 24;
+                _searchBox.Width = Math.Max(40, _searchWrap.Width - 34);
                 _phraseList.Invalidate();
             };
 
@@ -1072,50 +1929,125 @@ namespace HuahuaHelper
 
         private void OpenSettingsDialog()
         {
+            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+            Color dlgBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            Color cardBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+            Color cardBorder = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+            Color txtPrimary = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+            Color txtSec = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+
             using (Form setDlg = new Form())
             {
-                setDlg.Text = "系统设置 - 客服花花";
-                setDlg.Size = new Size(420, 480);
+                setDlg.Text = "设置";
+                setDlg.Size = new Size(420, 678);
                 setDlg.StartPosition = FormStartPosition.CenterParent;
                 setDlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 setDlg.MaximizeBox = false;
                 setDlg.MinimizeBox = false;
-                setDlg.BackColor = Color.White;
+                setDlg.BackColor = dlgBg;
+                setDlg.ForeColor = txtPrimary;
                 setDlg.Font = new Font("Microsoft YaHei UI", 9F);
                 if (this.Icon != null) setDlg.Icon = this.Icon;
 
-                // 1. 自定义背景分组
-                GroupBox grpBg = new GroupBox
+                Action<Panel> paintCard = (pnl) =>
                 {
-                    Text = "🎨 界面背景主题",
-                    Location = new Point(18, 12),
-                    Size = new Size(368, 130),
-                    ForeColor = Color.FromArgb(40, 44, 52)
+                    pnl.Paint += (s, e) =>
+                    {
+                        using (Pen p = new Pen(cardBorder, 1))
+                        {
+                            e.Graphics.DrawRectangle(p, 0, 0, pnl.Width - 1, pnl.Height - 1);
+                        }
+                    };
                 };
 
-                RadioButton rbWhite = new RadioButton { Text = "⚪ 经典白 (清爽明亮)", Location = new Point(20, 26), AutoSize = true };
-                RadioButton rbBlack = new RadioButton { Text = "⚫ 极夜黑 (暗黑护眼)", Location = new Point(190, 26), AutoSize = true };
-                RadioButton rbCustom = new RadioButton { Text = "🖼️ 自定义图片背景", Location = new Point(20, 56), AutoSize = true };
+                // 0. 主题配色风格卡片（暖橙纸感 / 樱粉花语）
+                Panel pnlScheme = new Panel
+                {
+                    Location = new Point(16, 12),
+                    Size = new Size(372, 82),
+                    BackColor = cardBg
+                };
+                paintCard(pnlScheme);
+
+                Label lblSchemeTitle = new Label
+                {
+                    Text = "主题配色",
+                    Location = new Point(14, 10),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+                    ForeColor = txtPrimary
+                };
+
+                RadioButton rbSchemeOrange = new RadioButton { Text = "暖橙纸感", Location = new Point(16, 34), AutoSize = true, ForeColor = txtPrimary };
+                Label lblOrangeDesc = new Label { Text = "淘宝橙，干练", Location = new Point(34, 56), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
+
+                RadioButton rbSchemePink = new RadioButton { Text = "樱粉花语", Location = new Point(188, 34), AutoSize = true, ForeColor = txtPrimary };
+                Label lblPinkDesc = new Label { Text = "站点粉，柔和", Location = new Point(206, 56), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
+
+                if (_data.Settings.ColorScheme == "pink") rbSchemePink.Checked = true;
+                else rbSchemeOrange.Checked = true;
+
+                pnlScheme.Controls.AddRange(new Control[] { lblSchemeTitle, rbSchemeOrange, lblOrangeDesc, rbSchemePink, lblPinkDesc });
+
+                // 1. 界面背景主题卡片
+                Panel pnlBg = new Panel
+                {
+                    Location = new Point(16, 104),
+                    Size = new Size(372, 158),
+                    BackColor = cardBg
+                };
+                paintCard(pnlBg);
+
+                Label lblBgTitle = new Label
+                {
+                    Text = "界面背景",
+                    Location = new Point(14, 10),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+                    ForeColor = txtPrimary
+                };
+
+                RadioButton rbWhite = new RadioButton { Text = "经典白", Location = new Point(16, 36), AutoSize = true, ForeColor = txtPrimary };
+                Label lblWhiteDesc = new Label { Text = "清爽明亮", Location = new Point(34, 59), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
+
+                RadioButton rbBlack = new RadioButton { Text = "深色护眼", Location = new Point(188, 36), AutoSize = true, ForeColor = txtPrimary };
+                Label lblBlackDesc = new Label { Text = "晚上看不刺眼", Location = new Point(206, 59), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
+
+                RadioButton rbCustom = new RadioButton { Text = "自定义图片", Location = new Point(16, 88), AutoSize = true, ForeColor = txtPrimary };
+                Label lblCustomDesc = new Label { Text = "用自己的图做背景", Location = new Point(34, 111), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
+
+                Panel picIconImg = new Panel { Location = new Point(120, 89), Size = new Size(16, 16), BackColor = Color.Transparent };
+                picIconImg.Paint += (s, e) => GlassRenderer.DrawVectorImageIcon(e.Graphics, new Rectangle(0, 0, 16, 16), txtSec);
 
                 string currentTheme = _data.Settings.ThemeType;
                 if (currentTheme == "black") rbBlack.Checked = true;
                 else if (currentTheme == "custom") rbCustom.Checked = true;
                 else rbWhite.Checked = true;
 
-                Button btnChooseBg = new Button
+                LiquidGlassButtonControl btnChooseBg = new LiquidGlassButtonControl
                 {
-                    Text = "📁 选择背景图片...",
-                    Location = new Point(20, 86),
-                    Size = new Size(130, 30),
-                    FlatStyle = FlatStyle.Flat
+                    Text = "选择图片...",
+                    Location = new Point(188, 94),
+                    Size = new Size(86, 28),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = txtPrimary
                 };
-                Button btnClearBg = new Button
+                LiquidGlassButtonControl btnClearBg = new LiquidGlassButtonControl
                 {
-                    Text = "清除图片",
-                    Location = new Point(160, 86),
-                    Size = new Size(90, 30),
-                    FlatStyle = FlatStyle.Flat
+                    Text = "一键删图",
+                    Location = new Point(280, 94),
+                    Size = new Size(76, 28),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226),
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = WarmTheme.DangerRed
                 };
+                ToolTip clearTip = new ToolTip();
+                clearTip.SetToolTip(btnClearBg, "清除背景并一键删除本地保存的所有背景图片文件");
 
                 string tempCustomBg = _data.Settings.CustomBgPath;
 
@@ -1135,7 +2067,7 @@ namespace HuahuaHelper
                                 File.Copy(ofd.FileName, fullTarget, true);
                                 tempCustomBg = newBgName;
                                 rbCustom.Checked = true;
-                                MessageBox.Show("背景图片已载入！保存设置后生效。", "提示");
+                                MessageBox.Show("背景图片已载入，点保存后生效。", "提示");
                             }
                             catch (Exception ex)
                             {
@@ -1147,25 +2079,57 @@ namespace HuahuaHelper
 
                 btnClearBg.Click += (s, e) =>
                 {
+                    if (_customBgImg != null)
+                    {
+                        _customBgImg.Dispose();
+                        _customBgImg = null;
+                    }
+                    _phraseList.SetTheme("white", null);
+
+                    int deletedCount = 0;
+                    try
+                    {
+                        string[] bgFiles = Directory.GetFiles(AppDomain.CurrentDomain.BaseDirectory, "bg_*.*");
+                        foreach (string f in bgFiles)
+                        {
+                            try { File.Delete(f); deletedCount++; } catch { }
+                        }
+                    }
+                    catch { }
+
                     tempCustomBg = "";
-                    rbWhite.Checked = true;
+                    _data.Settings.CustomBgPath = "";
+                    if (rbCustom.Checked) rbWhite.Checked = true;
+
+                    MessageBox.Show(
+                        deletedCount > 0 ? string.Format("已一键删除 {0} 张历史背景图片！", deletedCount) : "当前没有已保存的背景图片文件。",
+                        "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 };
 
-                grpBg.Controls.AddRange(new Control[] { rbWhite, rbBlack, rbCustom, btnChooseBg, btnClearBg });
+                pnlBg.Controls.AddRange(new Control[] { lblBgTitle, rbWhite, lblWhiteDesc, rbBlack, lblBlackDesc, rbCustom, lblCustomDesc, picIconImg, btnChooseBg, btnClearBg });
 
-                // 2. 字体大小分组（加大最大等级，提供4档舒适字号）
-                GroupBox grpFont = new GroupBox
+                // 2. 字体大小卡片（2x2 网格防止单选框被遮挡）
+                Panel pnlFont = new Panel
                 {
-                    Text = "🔠 提示词字体大小",
-                    Location = new Point(18, 152),
-                    Size = new Size(368, 75),
-                    ForeColor = Color.FromArgb(40, 44, 52)
+                    Location = new Point(16, 272),
+                    Size = new Size(372, 92),
+                    BackColor = cardBg
+                };
+                paintCard(pnlFont);
+
+                Label lblFontTitle = new Label
+                {
+                    Text = "话术字号",
+                    Location = new Point(14, 10),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+                    ForeColor = txtPrimary
                 };
 
-                RadioButton rbF0 = new RadioButton { Text = "标准(9pt)", Location = new Point(15, 30), AutoSize = true };
-                RadioButton rbF1 = new RadioButton { Text = "中号(11pt)", Location = new Point(98, 30), AutoSize = true };
-                RadioButton rbF2 = new RadioButton { Text = "大号(13pt)", Location = new Point(188, 30), AutoSize = true };
-                RadioButton rbF3 = new RadioButton { Text = "特大(15pt)🔥", Location = new Point(275, 30), AutoSize = true, Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold), ForeColor = _primaryOrange };
+                RadioButton rbF0 = new RadioButton { Text = "标准 (9pt)", Location = new Point(16, 36), AutoSize = true, ForeColor = txtPrimary };
+                RadioButton rbF1 = new RadioButton { Text = "中号 (11pt)", Location = new Point(185, 36), AutoSize = true, ForeColor = txtPrimary };
+                RadioButton rbF2 = new RadioButton { Text = "大号 (13pt)", Location = new Point(16, 62), AutoSize = true, ForeColor = txtPrimary };
+                RadioButton rbF3 = new RadioButton { Text = "特大 (15pt)", Location = new Point(185, 62), AutoSize = true, ForeColor = txtPrimary };
 
                 int curLevel = _data.Settings.FontSizeLevel;
                 if (curLevel == 1) rbF1.Checked = true;
@@ -1173,43 +2137,73 @@ namespace HuahuaHelper
                 else if (curLevel == 3) rbF3.Checked = true;
                 else rbF0.Checked = true;
 
-                grpFont.Controls.AddRange(new Control[] { rbF0, rbF1, rbF2, rbF3 });
+                pnlFont.Controls.AddRange(new Control[] { lblFontTitle, rbF0, rbF1, rbF2, rbF3 });
 
-                // 3. 数据备份与换机迁移分组
-                GroupBox grpBackup = new GroupBox
+                // 3. 备份与换机卡片
+                Panel pnlBackup = new Panel
                 {
-                    Text = "💾 数据备份与换机迁移",
-                    Location = new Point(18, 237),
-                    Size = new Size(368, 125),
-                    ForeColor = Color.FromArgb(40, 44, 52)
+                    Location = new Point(16, 374),
+                    Size = new Size(372, 148),
+                    BackColor = cardBg
+                };
+                paintCard(pnlBackup);
+
+                Panel picIconBackup = new Panel { Location = new Point(14, 10), Size = new Size(16, 16), BackColor = Color.Transparent };
+                picIconBackup.Paint += (s, e) => GlassRenderer.DrawVectorBackupIcon(e.Graphics, new Rectangle(0, 0, 16, 16), txtPrimary);
+
+                Label lblBackupTitle = new Label
+                {
+                    Text = "备份与换机",
+                    Location = new Point(34, 10),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+                    ForeColor = txtPrimary
+                };
+                Label lblBackupDesc = new Label
+                {
+                    Text = "话术和图片打成一个包，换电脑一键恢复",
+                    Location = new Point(14, 32),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 8F),
+                    ForeColor = txtSec
                 };
 
-                Button btnExport = new Button
+                LiquidGlassButtonControl btnExport = new LiquidGlassButtonControl
                 {
-                    Text = "📤 导出全量备份包 (.zip)",
-                    Location = new Point(18, 28),
-                    Size = new Size(200, 34),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(246, 248, 252)
+                    Text = "导出备份包 (.zip)",
+                    Location = new Point(14, 62),
+                    Size = new Size(124, 32),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = txtPrimary
                 };
                 btnExport.Click += (s, e) => ExportBackupData();
 
-                Button btnImport = new Button
+                LiquidGlassButtonControl btnImport = new LiquidGlassButtonControl
                 {
-                    Text = "📥 导入备份包恢复...",
-                    Location = new Point(18, 72),
-                    Size = new Size(200, 34),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(246, 248, 252)
+                    Text = "导入备份包...",
+                    Location = new Point(146, 62),
+                    Size = new Size(110, 32),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = txtPrimary
                 };
                 btnImport.Click += (s, e) => ImportBackupData();
 
-                Button btnOpenDir = new Button
+                LiquidGlassButtonControl btnOpenDir = new LiquidGlassButtonControl
                 {
-                    Text = "📂 数据目录",
-                    Location = new Point(235, 48),
-                    Size = new Size(115, 36),
-                    FlatStyle = FlatStyle.Flat
+                    Text = "数据目录",
+                    Location = new Point(264, 62),
+                    Size = new Size(92, 32),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = txtSec
                 };
                 btnOpenDir.Click += (s, e) =>
                 {
@@ -1217,32 +2211,138 @@ namespace HuahuaHelper
                     catch { }
                 };
 
-                grpBackup.Controls.AddRange(new Control[] { btnExport, btnImport, btnOpenDir });
-
-                Button btnSave = new Button
+                LiquidGlassButtonControl btnClearPhrases = new LiquidGlassButtonControl
                 {
-                    Text = "保存设置",
-                    Location = new Point(205, 385),
-                    Size = new Size(95, 34),
-                    BackColor = _primaryOrange,
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat,
-                    DialogResult = DialogResult.OK
+                    Text = "一键清理所有提示词",
+                    Location = new Point(14, 102),
+                    Size = new Size(156, 32),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226),
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = WarmTheme.DangerRed
                 };
-                btnSave.FlatAppearance.BorderSize = 0;
+                btnClearPhrases.Click += (s, e) =>
+                {
+                    if (_data.Phrases.Count == 0)
+                    {
+                        MessageBox.Show("当前没有任何提示词，无需清理。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
 
-                Button btnCancel = new Button
+                    DialogResult r1 = MessageBox.Show(
+                        string.Format("确定要清理全部 {0} 条提示词吗？\n（分类名称将会保留，关联的附带图片将一并清理）", _data.Phrases.Count),
+                        "确认清理所有提示词", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (r1 != DialogResult.Yes) return;
+
+                    DialogResult r2 = MessageBox.Show(
+                        "请再次确认：清空后无法撤销，是否立即删除所有提示词？",
+                        "二次确认", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
+                    if (r2 != DialogResult.Yes) return;
+
+                    _data.Phrases.Clear();
+                    try
+                    {
+                        if (Directory.Exists(_imagesDir))
+                        {
+                            foreach (string f in Directory.GetFiles(_imagesDir))
+                            {
+                                try { File.Delete(f); } catch { }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    SaveData();
+                    RefreshList();
+                    MessageBox.Show("已成功清空所有提示词！", "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                };
+
+                pnlBackup.Controls.AddRange(new Control[] { picIconBackup, lblBackupTitle, lblBackupDesc, btnExport, btnImport, btnOpenDir, btnClearPhrases });
+
+                // 4. 开源项目地址卡片
+                string repoUrl = "https://github.com/l1011186781-commits/kefu-huahua";
+                Panel pnlAbout = new Panel
+                {
+                    Location = new Point(16, 532),
+                    Size = new Size(372, 54),
+                    BackColor = cardBg
+                };
+                paintCard(pnlAbout);
+
+                Label lblGitHubTitle = new Label
+                {
+                    Text = "开源项目地址（点击打开）",
+                    Location = new Point(14, 8),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold),
+                    ForeColor = txtPrimary
+                };
+                LinkLabel lnkGitHub = new LinkLabel
+                {
+                    Text = repoUrl,
+                    Location = new Point(14, 28),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 8.5F),
+                    LinkColor = isDark ? WarmTheme.DarkPrimaryAccent : WarmTheme.Orange,
+                    ActiveLinkColor = WarmTheme.OrangePressed,
+                    VisitedLinkColor = isDark ? WarmTheme.DarkPrimaryAccent : WarmTheme.Orange,
+                    LinkBehavior = LinkBehavior.HoverUnderline,
+                    Cursor = Cursors.Hand
+                };
+                ToolTip ghTip = new ToolTip();
+                ghTip.SetToolTip(lnkGitHub, "点击在浏览器中访问项目主页");
+                lnkGitHub.LinkClicked += (s, e) =>
+                {
+                    try { System.Diagnostics.Process.Start(repoUrl); }
+                    catch (Exception ex) { MessageBox.Show("无法打开浏览器: " + ex.Message, "提示"); }
+                };
+                pnlAbout.Controls.AddRange(new Control[] { lblGitHubTitle, lnkGitHub });
+
+                LiquidGlassButtonControl btnSave = new LiquidGlassButtonControl
+                {
+                    Text = "保存",
+                    Location = new Point(216, 598),
+                    Size = new Size(88, 32),
+                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
+                    BaseNormal = WarmTheme.Orange,
+                    BaseHover = WarmTheme.OrangeHover,
+                    BasePressed = WarmTheme.OrangePressed,
+                    BorderColor = WarmTheme.Orange,
+                    TextColor = Color.White
+                };
+                btnSave.Click += (s, e) => { setDlg.DialogResult = DialogResult.OK; setDlg.Close(); };
+
+                LiquidGlassButtonControl btnCancel = new LiquidGlassButtonControl
                 {
                     Text = "取消",
-                    Location = new Point(310, 385),
-                    Size = new Size(76, 34),
-                    DialogResult = DialogResult.Cancel
+                    Location = new Point(312, 598),
+                    Size = new Size(76, 32),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = txtPrimary
+                };
+                btnCancel.Click += (s, e) => { setDlg.DialogResult = DialogResult.Cancel; setDlg.Close(); };
+
+                setDlg.Load += (s, e) =>
+                {
+                    lblOrangeDesc.Top = rbSchemeOrange.Bottom + 2;
+                    lblPinkDesc.Top = rbSchemePink.Bottom + 2;
+                    lblWhiteDesc.Top = rbWhite.Bottom + 2;
+                    lblBlackDesc.Top = rbBlack.Bottom + 2;
+                    lblCustomDesc.Top = rbCustom.Bottom + 2;
+                    picIconImg.Left = rbCustom.Right + 4;
+                    picIconImg.Top = rbCustom.Top + (rbCustom.Height - picIconImg.Height) / 2;
                 };
 
-                setDlg.Controls.AddRange(new Control[] { grpBg, grpFont, grpBackup, btnSave, btnCancel });
+                setDlg.Controls.AddRange(new Control[] { pnlScheme, pnlBg, pnlFont, pnlBackup, pnlAbout, btnSave, btnCancel });
 
                 if (setDlg.ShowDialog(this) == DialogResult.OK)
                 {
+                    _data.Settings.ColorScheme = rbSchemePink.Checked ? "pink" : "orange";
+
                     if (rbBlack.Checked) _data.Settings.ThemeType = "black";
                     else if (rbCustom.Checked) _data.Settings.ThemeType = "custom";
                     else _data.Settings.ThemeType = "white";
@@ -1262,6 +2362,8 @@ namespace HuahuaHelper
 
         private void ApplySettings()
         {
+            WarmTheme.SetScheme(_data.Settings.ColorScheme);
+
             int fLevel = _data.Settings.FontSizeLevel;
             if (fLevel == 0) _phraseList.SetFontConfig(9.0F, 36);
             else if (fLevel == 1) _phraseList.SetFontConfig(11.0F, 42);
@@ -1281,20 +2383,46 @@ namespace HuahuaHelper
                 }
             }
 
-            Color topBg = isDark ? Color.FromArgb(32, 34, 38) : Color.White;
-            Color textCol = isDark ? Color.FromArgb(235, 238, 245) : Color.FromArgb(40, 44, 52);
-            Color boxBg = isDark ? Color.FromArgb(45, 48, 56) : Color.White;
+            this.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+
+            Color topBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+            Color textCol = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+            Color secCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+            Color boxBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightSearchBg;
 
             _topBar.BackColor = topBg;
+            _topBar.Invalidate();
+            _picAvatar.Invalidate();
+            _lblLogo.ForeColor = textCol;
             _chkTopMost.ForeColor = textCol;
             _searchBox.BackColor = boxBg;
-            _searchBox.ForeColor = isDark ? Color.FromArgb(200, 205, 215) : Color.Black;
+            if (_searchBox.Text == SearchPlaceholder)
+                _searchBox.ForeColor = isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
+            else
+                _searchBox.ForeColor = textCol;
+            _searchWrap.Invalidate();
 
-            _btnSettings.BaseTop = isDark ? Color.FromArgb(55, 60, 70) : Color.FromArgb(252, 253, 255);
-            _btnSettings.BaseBottom = isDark ? Color.FromArgb(42, 46, 54) : Color.FromArgb(238, 242, 248);
-            _btnSettings.BorderColor = isDark ? Color.FromArgb(70, 75, 88) : Color.FromArgb(215, 222, 234);
-            _btnSettings.TextColor = isDark ? Color.FromArgb(200, 205, 215) : Color.FromArgb(80, 85, 95);
+            _btnSettings.IsDarkTheme = isDark;
+            _btnSettings.BaseNormal = Color.Transparent;
+            _btnSettings.BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg;
+            _btnSettings.BasePressed = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+            _btnSettings.BorderColor = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+            _btnSettings.TextColor = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
             _btnSettings.Invalidate();
+
+            _btnAddPhrase.IsDarkTheme = isDark;
+            _btnAddPhrase.BaseNormal = WarmTheme.Orange;
+            _btnAddPhrase.BaseHover = WarmTheme.OrangeHover;
+            _btnAddPhrase.BasePressed = WarmTheme.OrangePressed;
+            _btnAddPhrase.BorderColor = WarmTheme.Orange;
+            _btnAddPhrase.Invalidate();
+
+            _statusBar.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            _statusBar.Invalidate();
+            if (string.IsNullOrEmpty(_lastTargetTitle))
+            {
+                _lblTarget.ForeColor = secCol;
+            }
 
             _categoryBar.IsDarkTheme = isDark;
             _categoryBar.Invalidate();
@@ -1341,7 +2469,7 @@ namespace HuahuaHelper
                         ZipFile.CreateFromDirectory(tempDir, sfd.FileName, CompressionLevel.Optimal, false);
 
                         MessageBox.Show(
-                            string.Format("🎉 备份成功！\n\n备份包已保存至：\n{0}\n\n💡 换电脑时，只需将此备份文件发到新电脑，\n点击【设置 ➔ 导入备份包】即可一秒复原所有提示词与图片！", sfd.FileName),
+                            string.Format("备份成功！\n\n备份包已保存至：\n{0}\n\n换电脑时，将此文件发到新电脑，在「设置 -> 备份与换机 -> 导入备份包」即可恢复所有话术与图片。", sfd.FileName),
                             "备份成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
@@ -1404,7 +2532,7 @@ namespace HuahuaHelper
                         RefreshList();
 
                         MessageBox.Show(
-                            string.Format("🎉 恢复完成！\n\n已成功复原 {0} 个分类、{1} 条提示词（附带图片均已恢复就绪）！", _data.Categories.Count, _data.Phrases.Count),
+                            string.Format("恢复完成！已成功复原 {0} 个分类、{1} 条话术。", _data.Categories.Count, _data.Phrases.Count),
                             "恢复成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
@@ -1425,7 +2553,7 @@ namespace HuahuaHelper
 
             using (Form eggForm = new Form())
             {
-                eggForm.Text = "🌸 客服花花 - 看板娘原图";
+                eggForm.Text = "客服花花 - 原画";
                 eggForm.Size = new Size(360, 420);
                 eggForm.StartPosition = FormStartPosition.CenterParent;
                 eggForm.FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -1446,10 +2574,10 @@ namespace HuahuaHelper
                 Label lblText = new Label
                 {
                     Dock = DockStyle.Fill,
-                    Text = "🐱「？？！正在努力帮主人回复客户呢！」\n点击任意处或按 ESC 即可返回",
+                    Text = "「正在努力帮主人回复客户呢！」\n点击任意处或按 ESC 返回",
                     TextAlign = ContentAlignment.MiddleCenter,
                     Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular),
-                    ForeColor = Color.FromArgb(100, 105, 115)
+                    ForeColor = WarmTheme.LightTextSecondary
                 };
 
                 eggForm.Controls.Add(lblText);
@@ -1479,8 +2607,12 @@ namespace HuahuaHelper
                         _lastTargetHwnd = fg;
                         _lastTargetTitle = title;
                         string shortTitle = title.Length > 14 ? title.Substring(0, 12) + ".." : title;
-                        _lblTarget.Text = "🎯 目标: " + shortTitle;
-                        _lblTarget.ForeColor = title.Contains("千牛") || title.Contains("旺旺") ? _primaryOrange : Color.FromArgb(40, 160, 70);
+                        _lblTarget.Text = "目标: " + shortTitle;
+                        bool isQianniu = title.Contains("千牛") || title.Contains("旺旺");
+                        bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                        _lblTarget.ForeColor = isQianniu
+                            ? (isDark ? WarmTheme.OrangeHover : WarmTheme.Orange)
+                            : (isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary);
                     }
                 }
             };
@@ -1489,22 +2621,34 @@ namespace HuahuaHelper
 
         private void RefreshList()
         {
-            string keyword = _searchBox.Text.StartsWith("🔍") ? "" : _searchBox.Text.Trim();
+            string keyword = (_searchBox.Text == SearchPlaceholder) ? "" : _searchBox.Text.Trim();
+            string catFilter = _currentCat;
+            bool hasKeyword = !string.IsNullOrEmpty(keyword);
 
-            List<PhraseItem> filtered = new List<PhraseItem>();
-            foreach (var item in _data.Phrases)
+            Func<PhraseItem, bool> matchFunc = (item) =>
             {
-                if (_currentCat != "全部" && item.Category != _currentCat)
-                    continue;
+                if (catFilter != "全部" && item.Category != catFilter)
+                    return false;
 
-                if (!string.IsNullOrEmpty(keyword))
+                if (hasKeyword)
                 {
                     bool matchTitle = item.Title.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
                     bool matchContent = item.Content.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
-                    if (!matchTitle && !matchContent) continue;
+                    bool matchCat = !string.IsNullOrEmpty(item.Category) && item.Category.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0;
+                    if (!matchTitle && !matchContent && !matchCat) return false;
                 }
+                return true;
+            };
 
-                filtered.Add(item);
+            List<PhraseItem> filtered;
+            if (_data.Phrases.Count > 150)
+            {
+                // 大数据量时启用多核并行筛选（保持原有顺序）
+                filtered = _data.Phrases.AsParallel().AsOrdered().Where(matchFunc).ToList();
+            }
+            else
+            {
+                filtered = _data.Phrases.Where(matchFunc).ToList();
             }
 
             _phraseList.UpdateData(filtered);
@@ -1803,29 +2947,42 @@ namespace HuahuaHelper
 
                 Button btnUploadImg = new Button
                 {
-                    Text = "📁 本地选择",
+                    Text = "本地选择",
                     Location = new Point(175, 195),
-                    Size = new Size(80, 26),
-                    FlatStyle = FlatStyle.Flat
+                    Size = new Size(80, 28),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = WarmTheme.LightCardBg,
+                    ForeColor = WarmTheme.LightTextPrimary
                 };
+                btnUploadImg.FlatAppearance.BorderColor = WarmTheme.LightBorder;
 
                 Button btnPasteImg = new Button
                 {
-                    Text = "📋 粘贴图片",
-                    Location = new Point(265, 195),
-                    Size = new Size(85, 26),
+                    Text = "  粘贴图片",
+                    Location = new Point(262, 195),
+                    Size = new Size(92, 28),
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = Color.FromArgb(240, 246, 255)
+                    BackColor = WarmTheme.LightCardBg,
+                    ForeColor = WarmTheme.LightTextPrimary,
+                    TextAlign = ContentAlignment.MiddleRight,
+                    Padding = new Padding(0, 0, 6, 0)
+                };
+                btnPasteImg.FlatAppearance.BorderColor = WarmTheme.LightBorder;
+                btnPasteImg.Paint += (s, e) =>
+                {
+                    GlassRenderer.DrawVectorClipboardIcon(e.Graphics, new Rectangle(6, 6, 16, 16), WarmTheme.LightChipText);
                 };
 
                 Button btnClearImg = new Button
                 {
-                    Text = "🗑️ 清除图片",
+                    Text = "清除图片",
                     Location = new Point(175, 230),
-                    Size = new Size(80, 26),
+                    Size = new Size(80, 28),
                     FlatStyle = FlatStyle.Flat,
-                    ForeColor = Color.FromArgb(190, 50, 50)
+                    BackColor = WarmTheme.LightCardBg,
+                    ForeColor = WarmTheme.DangerRed
                 };
+                btnClearImg.FlatAppearance.BorderColor = WarmTheme.LightBorder;
 
                 btnUploadImg.Click += (s, e) =>
                 {
@@ -2083,6 +3240,7 @@ namespace HuahuaHelper
             sb.Append("  \"Settings\": {\n");
             sb.AppendFormat("    \"FontSizeLevel\": {0},\n", data.Settings.FontSizeLevel);
             sb.AppendFormat("    \"ThemeType\": \"{0}\",\n", Escape(data.Settings.ThemeType));
+            sb.AppendFormat("    \"ColorScheme\": \"{0}\",\n", Escape(data.Settings.ColorScheme));
             sb.AppendFormat("    \"CustomBgPath\": \"{0}\",\n", Escape(data.Settings.CustomBgPath));
             sb.AppendFormat("    \"WindowWidth\": {0},\n", data.Settings.WindowWidth);
             sb.AppendFormat("    \"WindowHeight\": {0},\n", data.Settings.WindowHeight);
@@ -2130,6 +3288,9 @@ namespace HuahuaHelper
 
             string theme = ExtractValue(json, "ThemeType");
             if (!string.IsNullOrEmpty(theme)) appData.Settings.ThemeType = theme;
+
+            string scheme = ExtractValue(json, "ColorScheme");
+            if (!string.IsNullOrEmpty(scheme)) appData.Settings.ColorScheme = scheme;
 
             string customBg = ExtractValue(json, "CustomBgPath");
             if (!string.IsNullOrEmpty(customBg)) appData.Settings.CustomBgPath = customBg;
