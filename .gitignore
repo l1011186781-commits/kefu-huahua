@@ -5,8 +5,12 @@
 *.zip
 backup_*.zip
 
-# 本地数据目录与临时文件
+# 本地数据目录、用户配置与临时文件
 images/
+videos/
+phrases.json
+bg_*.*
+error.log
 bin/
 obj/
 .vs/

@@ -20,8 +20,8 @@ using System.Windows.Forms;
 [assembly: AssemblyCompany("HuahuaHelper")]
 [assembly: AssemblyProduct("客服花花")]
 [assembly: AssemblyCopyright("Copyright (C) 2026 HuahuaHelper")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.3.0.0")]
+[assembly: AssemblyFileVersion("1.3.0.0")]
 
 namespace HuahuaHelper
 {
@@ -32,20 +32,26 @@ namespace HuahuaHelper
         public string Title { get; set; }
         public string Content { get; set; }
         public string ImagePath { get; set; }
+        public string ItemType { get; set; } // "text" 或 "video"
+        public string VideoPath { get; set; }
 
         public PhraseItem()
         {
             Id = Guid.NewGuid().ToString("N");
             ImagePath = "";
+            ItemType = "text";
+            VideoPath = "";
         }
 
-        public PhraseItem(string cat, string title, string content, string imgPath)
+        public PhraseItem(string cat, string title, string content, string imgPath, string itemType = "text", string videoPath = "")
         {
             Id = Guid.NewGuid().ToString("N");
             Category = cat;
             Title = title;
             Content = content;
             ImagePath = imgPath ?? "";
+            ItemType = string.IsNullOrEmpty(itemType) ? "text" : itemType;
+            VideoPath = videoPath ?? "";
         }
     }
 
@@ -55,6 +61,7 @@ namespace HuahuaHelper
         public string ThemeType { get; set; }   // "white", "black", "custom"
         public string ColorScheme { get; set; } // "orange": 暖橙纸感, "pink": 樱粉花语
         public string CustomBgPath { get; set; }
+        public bool CopyMediaToLocal { get; set; } // 是否复制图片/视频/背景到软件目录（默认 false：直接识别原路径）
         public int WindowWidth { get; set; }
         public int WindowHeight { get; set; }
         public int WindowX { get; set; }
@@ -67,6 +74,7 @@ namespace HuahuaHelper
             ThemeType = "white";
             ColorScheme = "orange";
             CustomBgPath = "";
+            CopyMediaToLocal = false;
             WindowWidth = 320;
             WindowHeight = 680;
             WindowX = -1;
@@ -78,13 +86,15 @@ namespace HuahuaHelper
     public class AppData
     {
         public AppSettings Settings { get; set; }
-        public List<string> Categories { get; set; }
+        public List<string> Categories { get; set; }      // 文本话术分类
+        public List<string> VideoCategories { get; set; } // 视频快捷方式独立分类
         public List<PhraseItem> Phrases { get; set; }
 
         public AppData()
         {
             Settings = new AppSettings();
             Categories = new List<string>();
+            VideoCategories = new List<string>();
             Phrases = new List<PhraseItem>();
         }
     }
@@ -265,15 +275,15 @@ namespace HuahuaHelper
 
         public static readonly LiquidGlassParams Dark = new LiquidGlassParams
         {
-            BlurLayer1 = Color.FromArgb(20, 255, 255, 255),      // ~8% 深色柔光
-            BlurLayer2 = Color.FromArgb(32, 255, 255, 255),      // ~12.5% 玻璃层
-            GlassFill = Color.FromArgb(38, 255, 255, 255),       // ~15% 白色玻璃体 (12%~28%)
-            GlassHoverFill = Color.FromArgb(56, 255, 255, 255),  // ~22% 悬停态
-            InnerRefract = Color.FromArgb(90, 255, 255, 255),    // 内侧折射亮边
-            TopHighlight = Color.FromArgb(165, 255, 255, 255),   // 顶部 1px 高光描边
-            InnerShadow = Color.FromArgb(45, 0, 0, 0),           // 深色内阴影
-            OuterShadow = Color.FromArgb(55, 0, 0, 0),           // 深色外层柔和投影
-            OuterBorder = Color.FromArgb(70, 255, 255, 255)      // 深色微亮外框
+            BlurLayer1 = Color.FromArgb(12, 255, 255, 255),      // ~5% 深色柔和底层
+            BlurLayer2 = Color.FromArgb(20, 255, 255, 255),      // ~8% 深色玻璃层
+            GlassFill = Color.FromArgb(24, 255, 255, 255),       // ~9.5% 深色通透玻璃
+            GlassHoverFill = Color.FromArgb(42, 255, 255, 255),  // ~16.5% 悬停态
+            InnerRefract = Color.FromArgb(65, 255, 255, 255),    // 柔和内侧折射
+            TopHighlight = Color.FromArgb(120, 255, 255, 255),   // 顶部 1px 细腻高光
+            InnerShadow = Color.FromArgb(30, 0, 0, 0),           // 柔和内阴影
+            OuterShadow = Color.FromArgb(20, 0, 0, 0),           // 极轻外投影，消除图标旁黑色晕圈
+            OuterBorder = Color.FromArgb(55, 255, 255, 255)      // 柔和细边框
         };
     }
 
@@ -642,6 +652,172 @@ namespace HuahuaHelper
                 g.DrawLine(p, cx + 1.5f, cy - 3.8f, cx + 3.8f, cy - 1.5f);
             }
         }
+
+        /// <summary>
+        /// 16x16 细线文本/文档图标
+        /// </summary>
+        public static void DrawVectorDocIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float x = rect.X + (rect.Width - 10f) / 2f;
+            float y = rect.Y + (rect.Height - 12f) / 2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                RectangleF box = new RectangleF(x, y, 10f, 12f);
+                using (GraphicsPath path = CreateRoundedPath(Rectangle.Round(box), 2))
+                {
+                    g.DrawPath(p, path);
+                }
+                g.DrawLine(p, x + 2.5f, y + 4f, x + 7.5f, y + 4f);
+                g.DrawLine(p, x + 2.5f, y + 6.5f, x + 7.5f, y + 6.5f);
+                g.DrawLine(p, x + 2.5f, y + 9f, x + 5.8f, y + 9f);
+            }
+        }
+
+        /// <summary>
+        /// 16x16 细线视频播放框图标
+        /// </summary>
+        public static void DrawVectorVideoIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float x = rect.X + (rect.Width - 12f) / 2f;
+            float y = rect.Y + (rect.Height - 10f) / 2f;
+            using (Pen p = CreateIconPen(color))
+            {
+                RectangleF box = new RectangleF(x, y, 12f, 10f);
+                using (GraphicsPath path = CreateRoundedPath(Rectangle.Round(box), 2))
+                {
+                    g.DrawPath(p, path);
+                }
+                float cx = x + 6f;
+                float cy = y + 5f;
+                g.DrawPolygon(p, new PointF[]
+                {
+                    new PointF(cx - 1.5f, cy - 2.3f),
+                    new PointF(cx + 2.5f, cy),
+                    new PointF(cx - 1.5f, cy + 2.3f)
+                });
+            }
+        }
+    }
+
+    /// <summary>
+    /// 文本 / 视频 模式切换栏（位于分类栏上方）
+    /// </summary>
+    public class ModeSwitchBar : Control
+    {
+        public string ActiveMode { get; set; } // "text" or "video"
+        public int ItemCount { get; set; }
+        public bool IsDarkTheme { get; set; }
+        public event Action<string> OnModeChanged;
+
+        private int _hoverTab = -1; // 0: text, 1: video
+
+        public ModeSwitchBar()
+        {
+            ActiveMode = "text";
+            ItemCount = 0;
+            IsDarkTheme = false;
+            this.Height = 34;
+            this.Cursor = Cursors.Hand;
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw, true);
+
+            this.MouseMove += (s, e) =>
+            {
+                int prev = _hoverTab;
+                Rectangle rText = new Rectangle(12, 4, 64, 25);
+                Rectangle rVideo = new Rectangle(82, 4, 64, 25);
+                if (rText.Contains(e.Location)) _hoverTab = 0;
+                else if (rVideo.Contains(e.Location)) _hoverTab = 1;
+                else _hoverTab = -1;
+                if (prev != _hoverTab) this.Invalidate();
+            };
+            this.MouseLeave += (s, e) => { _hoverTab = -1; this.Invalidate(); };
+            this.MouseDown += (s, e) =>
+            {
+                if (e.Button != MouseButtons.Left) return;
+                if (_hoverTab == 0 && ActiveMode != "text")
+                {
+                    ActiveMode = "text";
+                    this.Invalidate();
+                    if (OnModeChanged != null) OnModeChanged("text");
+                }
+                else if (_hoverTab == 1 && ActiveMode != "video")
+                {
+                    ActiveMode = "video";
+                    this.Invalidate();
+                    if (OnModeChanged != null) OnModeChanged("video");
+                }
+            };
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Color barBg = IsDarkTheme ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+            Color lineCol = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+            g.Clear(barBg);
+
+            using (Pen linePen = new Pen(lineCol, 1))
+            {
+                g.DrawLine(linePen, 0, this.Height - 1, this.Width, this.Height - 1);
+            }
+
+            Rectangle rText = new Rectangle(12, 4, 64, 25);
+            Rectangle rVideo = new Rectangle(82, 4, 64, 25);
+
+            bool textActive = (ActiveMode != "video");
+            bool videoActive = (ActiveMode == "video");
+
+            using (Font fReg = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Regular))
+            using (Font fBold = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold))
+            using (Font fCount = new Font("Microsoft YaHei UI", 8F, FontStyle.Regular))
+            {
+                // 文本按钮
+                DrawTab(g, rText, "文本", textActive, _hoverTab == 0, true, fReg, fBold);
+                // 视频按钮
+                DrawTab(g, rVideo, "视频", videoActive, _hoverTab == 1, false, fReg, fBold);
+
+                // 右侧数量统计
+                Color cntCol = IsDarkTheme ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
+                Rectangle rCount = new Rectangle(152, 4, Math.Max(40, this.ClientSize.Width - 164), 25);
+                TextRenderer.DrawText(g, string.Format("共 {0} 条", ItemCount), fCount, rCount, cntCol,
+                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
+            }
+        }
+
+        private void DrawTab(Graphics g, Rectangle rect, string label, bool isActive, bool isHover, bool isDoc, Font fReg, Font fBold)
+        {
+            Color txtCol;
+            if (isActive)
+            {
+                GlassRenderer.DrawLiquidGlassButton(g, rect, WarmTheme.Orange, true, IsDarkTheme, isHover, false, 12);
+                txtCol = Color.White;
+            }
+            else
+            {
+                Color bgNormal = IsDarkTheme ? Color.Transparent : WarmTheme.LightSearchBg;
+                Color bgHover = IsDarkTheme ? WarmTheme.DarkRowHover : WarmTheme.LightRowHover;
+                Color bdr = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+                txtCol = IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
+                GlassRenderer.DrawLiquidGlassButton(g, rect, bgNormal, bgHover, bdr, isHover, 12);
+            }
+
+            Rectangle iconRect = new Rectangle(rect.X + 7, rect.Y + (rect.Height - 16) / 2, 16, 16);
+            if (isDoc) GlassRenderer.DrawVectorDocIcon(g, iconRect, txtCol);
+            else GlassRenderer.DrawVectorVideoIcon(g, iconRect, txtCol);
+
+            Rectangle txtRect = new Rectangle(rect.X + 23, rect.Y, rect.Width - 27, rect.Height);
+            TextRenderer.DrawText(g, label, isActive ? fBold : fReg, txtRect, txtCol,
+                TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+        }
     }
 
     /// <summary>
@@ -692,6 +868,10 @@ namespace HuahuaHelper
             Categories = new List<string> { "全部" };
             if (cats != null) Categories.AddRange(cats);
             ActiveCategory = active ?? "全部";
+            _hoverIndex = -1;
+            _hoverAddBtn = false;
+            _hoverDelBtn = false;
+            _scrollX = 0;
             ClampScroll();
             this.Invalidate();
         }
@@ -924,6 +1104,7 @@ namespace HuahuaHelper
         public int ItemHeight { get; set; }
         public float CustomFontSize { get; set; }
         public string ThemeType { get; set; }
+        public string CurrentMode { get; set; }
         public Image CustomBgImage { get; set; }
         public Image EmptyAvatarImage { get; set; }
 
@@ -934,8 +1115,6 @@ namespace HuahuaHelper
         private bool _isDraggingScroll = false;
         private int _dragStartY = 0;
         private int _dragStartOffset = 0;
-        private ToolTip _tip = new ToolTip();
-        private int _lastTipIndex = -1;
         private Bitmap _cachedBgBitmap = null;
         private int _bgRenderVersion = 0;
         private Font _titleFont;
@@ -952,6 +1131,7 @@ namespace HuahuaHelper
             ItemHeight = 36;
             CustomFontSize = 9.0F;
             ThemeType = "white";
+            CurrentMode = "text";
             RebuildFonts();
 
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
@@ -972,7 +1152,7 @@ namespace HuahuaHelper
             };
 
             this.MouseMove += MiniPhraseListView_MouseMove;
-            this.MouseLeave += (s, e) => { _hoverIndex = -1; _hoverBtnType = 0; _lastTipIndex = -1; _tip.Hide(this); this.Invalidate(); };
+            this.MouseLeave += (s, e) => { _hoverIndex = -1; _hoverBtnType = 0; this.Invalidate(); };
             this.MouseDown += MiniPhraseListView_MouseDown;
             this.MouseUp += (s, e) => { _isDraggingScroll = false; };
             this.DoubleClick += MiniPhraseListView_DoubleClick;
@@ -1068,6 +1248,8 @@ namespace HuahuaHelper
         {
             Items = list ?? new List<PhraseItem>();
             _selectedIndex = -1;
+            _hoverIndex = -1;
+            _hoverBtnType = 0;
             ClampScroll();
             this.Invalidate();
         }
@@ -1135,8 +1317,10 @@ namespace HuahuaHelper
 
             if (Items.Count == 0)
             {
+                bool needInv = (_hoverIndex != -1 || _hoverBtnType != 0);
                 _hoverIndex = -1;
                 _hoverBtnType = 0;
+                if (needInv) this.Invalidate();
                 return;
             }
 
@@ -1171,22 +1355,12 @@ namespace HuahuaHelper
                 else if (rEdit.Contains(e.Location)) _hoverBtnType = 1;
                 else _hoverBtnType = 0;
 
-                if (_lastTipIndex != newIdx)
-                {
-                    _lastTipIndex = newIdx;
-                    var item = Items[newIdx];
-                    string imgTip = string.IsNullOrEmpty(item.ImagePath) ? "" : "\n带图 · 先发文字再发图片";
-                    _tip.SetToolTip(this, string.Format("{0}{1}\n{2}\n\n双击该行或点「发」直接发出", item.Title, imgTip, item.Content));
-                }
-
                 if (prevIdx != _hoverIndex || prevType != _hoverBtnType) this.Invalidate();
             }
             else
             {
                 _hoverIndex = -1;
                 _hoverBtnType = 0;
-                _lastTipIndex = -1;
-                _tip.Hide(this);
                 if (prevIdx != -1 || prevType != 0) this.Invalidate();
             }
         }
@@ -1207,31 +1381,49 @@ namespace HuahuaHelper
                 }
             }
 
-            if (_hoverIndex >= 0 && _hoverIndex < Items.Count)
+            if (Items.Count == 0)
             {
-                _selectedIndex = _hoverIndex;
-                var item = Items[_hoverIndex];
-                if (_hoverBtnType == 3)
-                {
-                    if (OnActionTriggered != null) OnActionTriggered(item, true);
-                }
-                else if (_hoverBtnType == 2)
-                {
-                    if (OnActionTriggered != null) OnActionTriggered(item, false);
-                }
-                else if (_hoverBtnType == 1)
-                {
-                    if (OnEditRequested != null) OnEditRequested(item);
-                }
-                this.Invalidate();
+                _hoverIndex = -1;
+                _hoverBtnType = 0;
+                return;
             }
+
+            int clickIdx = (e.Y + _scrollOffset) / ItemHeight;
+            if (clickIdx < 0 || clickIdx >= Items.Count)
+            {
+                _hoverIndex = -1;
+                _hoverBtnType = 0;
+                _selectedIndex = -1;
+                this.Invalidate();
+                return;
+            }
+
+            _hoverIndex = clickIdx;
+            _selectedIndex = clickIdx;
+            var item = Items[clickIdx];
+            if (_hoverBtnType == 3)
+            {
+                if (OnActionTriggered != null) OnActionTriggered(item, true);
+            }
+            else if (_hoverBtnType == 2)
+            {
+                if (OnActionTriggered != null) OnActionTriggered(item, false);
+            }
+            else if (_hoverBtnType == 1)
+            {
+                if (OnEditRequested != null) OnEditRequested(item);
+            }
+            this.Invalidate();
         }
 
         private void MiniPhraseListView_DoubleClick(object sender, EventArgs e)
         {
-            if (_hoverIndex >= 0 && _hoverIndex < Items.Count)
+            if (Items.Count == 0) return;
+            Point pt = this.PointToClient(Cursor.Position);
+            int clickIdx = (pt.Y + _scrollOffset) / ItemHeight;
+            if (clickIdx >= 0 && clickIdx < Items.Count)
             {
-                var item = Items[_hoverIndex];
+                var item = Items[clickIdx];
                 if (OnActionTriggered != null) OnActionTriggered(item, true);
             }
         }
@@ -1299,30 +1491,29 @@ namespace HuahuaHelper
                 if (EmptyAvatarImage != null)
                 {
                     Rectangle imgRect = new Rectangle(cx - 24, cy - 42, 48, 48);
-                    if (WarmTheme.Current.IsPink)
+                    g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                    using (GraphicsPath clip = new GraphicsPath())
                     {
-                        using (GraphicsPath clip = new GraphicsPath())
-                        {
-                            clip.AddEllipse(imgRect);
-                            g.SetClip(clip);
-                            g.DrawImage(EmptyAvatarImage, imgRect);
-                            g.ResetClip();
-                        }
-                        using (Pen ringPen = new Pen(WarmTheme.Orange, 2))
-                        {
-                            g.DrawEllipse(ringPen, imgRect);
-                        }
-                    }
-                    else
-                    {
+                        clip.AddEllipse(imgRect);
+                        g.SetClip(clip);
                         g.DrawImage(EmptyAvatarImage, imgRect);
+                        g.ResetClip();
+                    }
+                    Color ringCol = WarmTheme.Current.IsPink
+                        ? WarmTheme.Orange
+                        : (isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder);
+                    float ringW = WarmTheme.Current.IsPink ? 2.0f : 1.0f;
+                    using (Pen ringPen = new Pen(ringCol, ringW))
+                    {
+                        g.DrawEllipse(ringPen, imgRect);
                     }
                 }
                 Color emptyTextCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
                 Rectangle txtRect = new Rectangle(12, cy + 14, this.ClientSize.Width - 24, 24);
+                string emptyHint = (CurrentMode == "video") ? "还没有视频快捷方式，点右上角加一个吧" : "还没有话术，点右上角加一个吧";
                 using (Font emptyFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular))
                 {
-                    TextRenderer.DrawText(g, "还没有话术，点右上角加一个吧", emptyFont, txtRect, emptyTextCol,
+                    TextRenderer.DrawText(g, emptyHint, emptyFont, txtRect, emptyTextCol,
                         TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
                 }
                 return;
@@ -1422,7 +1613,14 @@ namespace HuahuaHelper
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
 
                     string subInfo = string.IsNullOrEmpty(item.Category) ? "未分类" : item.Category;
-                    if (!string.IsNullOrEmpty(item.ImagePath)) subInfo += " · 带图";
+                    if (item.ItemType == "video" && !string.IsNullOrEmpty(item.VideoPath))
+                    {
+                        subInfo += " · 视频";
+                    }
+                    else if (!string.IsNullOrEmpty(item.ImagePath))
+                    {
+                        subInfo += " · 带图";
+                    }
                     TextRenderer.DrawText(g, subInfo, secFont, secRect, textSecondary,
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
 
@@ -1468,6 +1666,169 @@ namespace HuahuaHelper
     }
 
     /// <summary>
+    /// 解决 WinForms 子控件透明背景继承父面板绘制色块的问题（消除文字/图标旁黑框）
+    /// </summary>
+    public class GlassTopBarPanel : Panel
+    {
+        public bool IsDarkTheme { get; set; }
+
+        public GlassTopBarPanel()
+        {
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw, true);
+        }
+
+        protected override void OnPaintBackground(PaintEventArgs e)
+        {
+            Color baseBg = IsDarkTheme ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+            e.Graphics.Clear(baseBg);
+            GlassRenderer.DrawLiquidGlassPanel(e.Graphics, this.ClientRectangle, IsDarkTheme, 0);
+            Color lineCol = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+            using (Pen p = new Pen(lineCol, 1))
+            {
+                e.Graphics.DrawLine(p, 0, this.Height - 1, this.Width, this.Height - 1);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 自绘制精美置顶复选框（消除深色模式下原生白色方框）
+    /// </summary>
+    public class WarmCheckBox : Control
+    {
+        private bool _checked = true;
+        private bool _hovered = false;
+
+        public bool Checked
+        {
+            get { return _checked; }
+            set
+            {
+                if (_checked != value)
+                {
+                    _checked = value;
+                    this.Invalidate();
+                    if (CheckedChanged != null) CheckedChanged(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        public bool IsDarkTheme { get; set; }
+        public event EventHandler CheckedChanged;
+
+        public WarmCheckBox()
+        {
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw |
+                          ControlStyles.SupportsTransparentBackColor, true);
+            this.BackColor = Color.Transparent;
+            this.Cursor = Cursors.Hand;
+            this.Size = new Size(48, 22);
+
+            this.MouseEnter += (s, e) => { _hovered = true; this.Invalidate(); };
+            this.MouseLeave += (s, e) => { _hovered = false; this.Invalidate(); };
+            this.Click += (s, e) => { Checked = !Checked; };
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+            Rectangle boxRect = new Rectangle(1, (this.Height - 14) / 2, 14, 14);
+            using (GraphicsPath path = GlassRenderer.CreateRoundedPath(boxRect, 3))
+            {
+                if (_checked)
+                {
+                    Color fillCol = _hovered ? WarmTheme.OrangeHover : WarmTheme.Orange;
+                    using (Brush b = new SolidBrush(fillCol)) g.FillPath(b, path);
+                    using (Pen checkPen = new Pen(Color.White, 1.6f))
+                    {
+                        checkPen.StartCap = LineCap.Round;
+                        checkPen.EndCap = LineCap.Round;
+                        checkPen.LineJoin = LineJoin.Round;
+                        g.DrawLines(checkPen, new PointF[]
+                        {
+                            new PointF(boxRect.X + 3.2f, boxRect.Y + 7.2f),
+                            new PointF(boxRect.X + 6.0f, boxRect.Y + 10.0f),
+                            new PointF(boxRect.X + 10.8f, boxRect.Y + 4.2f)
+                        });
+                    }
+                }
+                else
+                {
+                    Color bgCol = IsDarkTheme ? WarmTheme.DarkPaperBg : WarmTheme.LightCardBg;
+                    Color bdrCol = _hovered
+                        ? WarmTheme.Orange
+                        : (IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder);
+                    using (Brush b = new SolidBrush(bgCol)) g.FillPath(b, path);
+                    using (Pen p = new Pen(bdrCol, 1)) g.DrawPath(p, path);
+                }
+            }
+
+            Color textCol = IsDarkTheme ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+            Rectangle textRect = new Rectangle(18, 0, this.Width - 18, this.Height);
+            TextRenderer.DrawText(g, this.Text, this.Font, textRect, textCol, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+        }
+    }
+
+    /// <summary>
+    /// 圆形头像绘制控件（避免浅灰方底在深色模式下产生白/黑边块）
+    /// </summary>
+    public class CircleAvatarControl : Control
+    {
+        public Image AvatarImage { get; set; }
+        public bool IsDarkTheme { get; set; }
+
+        public CircleAvatarControl()
+        {
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw |
+                          ControlStyles.SupportsTransparentBackColor, true);
+            this.BackColor = Color.Transparent;
+            this.Cursor = Cursors.Hand;
+            this.Size = new Size(24, 24);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Rectangle r = new Rectangle(1, 1, this.Width - 3, this.Height - 3);
+            if (AvatarImage != null)
+            {
+                g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                using (GraphicsPath clip = new GraphicsPath())
+                {
+                    clip.AddEllipse(r);
+                    g.SetClip(clip);
+                    g.DrawImage(AvatarImage, r);
+                    g.ResetClip();
+                }
+            }
+
+            Color ringCol = WarmTheme.Current.IsPink
+                ? WarmTheme.Orange
+                : (IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder);
+            float ringW = WarmTheme.Current.IsPink ? 1.8f : 1.0f;
+            using (Pen ringPen = new Pen(ringCol, ringW))
+            {
+                g.DrawEllipse(ringPen, r);
+            }
+        }
+    }
+
+    /// <summary>
     /// 扁平实色/幽灵独立按钮控件（用于顶栏与弹窗）
     /// </summary>
     public class LiquidGlassButtonControl : Control
@@ -1499,6 +1860,7 @@ namespace HuahuaHelper
             BorderColor = WarmTheme.LightBorder;
             TextColor = WarmTheme.LightChipText;
             CornerRadius = 6;
+            this.BackColor = Color.Transparent;
             this.Cursor = Cursors.Hand;
 
             this.MouseEnter += (s, e) => { IsHovered = true; this.Invalidate(); };
@@ -1562,16 +1924,17 @@ namespace HuahuaHelper
 
         // UI 控件
         private System.Windows.Forms.Timer _windowTrackerTimer;
-        private Panel _topBar;
-        private PictureBox _picAvatar;
+        private GlassTopBarPanel _topBar;
+        private CircleAvatarControl _picAvatar;
         private Label _lblLogo;
         private LiquidGlassButtonControl _btnSettings; // 幽灵矢量齿轮按钮
-        private CheckBox _chkTopMost;
+        private WarmCheckBox _chkTopMost;
         private LiquidGlassButtonControl _btnAddPhrase; // 实色淘宝橙按钮
         private Panel _searchWrap;
         private TextBox _searchBox;
         private bool _searchFocused = false;
         private const string SearchPlaceholder = "搜话术、分类…";
+        private ModeSwitchBar _modeBar;
         private CustomCategoryBar _categoryBar;
         private MiniPhraseListView _phraseList;
         private Panel _statusBar;
@@ -1579,28 +1942,129 @@ namespace HuahuaHelper
 
         // 数据
         private AppData _data = new AppData();
-        private string _currentCat = "全部";
+        private string _currentTextCat = "全部";
+        private string _currentVideoCat = "全部";
+        private string _currentMode = "text"; // "text" 或 "video"
+
+        private string ActiveCat
+        {
+            get { return _currentMode == "video" ? _currentVideoCat : _currentTextCat; }
+            set { if (_currentMode == "video") _currentVideoCat = value; else _currentTextCat = value; }
+        }
+
+        private List<string> ActiveCategories()
+        {
+            return (_currentMode == "video") ? _data.VideoCategories : _data.Categories;
+        }
         private readonly string _storagePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "phrases.json");
         private readonly string _iconPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "app.ico");
         private readonly string _avatarPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "avatar.png");
         private readonly string _imagesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images");
+        private readonly string _videosDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "videos");
         private Image _customBgImg = null;
         private Color _primaryOrange = Color.FromArgb(255, 80, 0);
 
         public MainForm()
         {
-            if (!Directory.Exists(_imagesDir)) Directory.CreateDirectory(_imagesDir);
-
             InitializeUi();
             LoadData();
             RestoreWindowBounds();
             ApplySettings();
-            _categoryBar.SetCategories(_data.Categories, _currentCat);
+            _categoryBar.SetCategories(ActiveCategories(), ActiveCat);
             RefreshList();
             StartTracking();
 
             this.ResizeEnd += (s, e) => SaveWindowBounds();
             this.FormClosing += (s, e) => SaveWindowBounds();
+        }
+
+        private static bool ContainsInvalidPathChars(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            char[] invalid = Path.GetInvalidPathChars();
+            for (int i = 0; i < path.Length; i++)
+            {
+                char c = path[i];
+                if (c < ' ') return true;
+                if (c == '\"') return true;
+                if (Array.IndexOf(invalid, c) >= 0) return true;
+            }
+            return false;
+        }
+
+        private static bool SafeIsPathRooted(string path)
+        {
+            if (string.IsNullOrEmpty(path) || ContainsInvalidPathChars(path)) return false;
+            try { return Path.IsPathRooted(path); }
+            catch { return false; }
+        }
+
+        private static string SafeGetExtension(string path)
+        {
+            if (string.IsNullOrEmpty(path) || ContainsInvalidPathChars(path)) return "";
+            try { return Path.GetExtension(path) ?? ""; }
+            catch { return ""; }
+        }
+
+        private static string SafeGetFileName(string path)
+        {
+            if (string.IsNullOrEmpty(path) || ContainsInvalidPathChars(path)) return "";
+            try { return Path.GetFileName(path) ?? ""; }
+            catch { return ""; }
+        }
+
+        private static bool SafeFileExists(string path)
+        {
+            if (string.IsNullOrEmpty(path) || ContainsInvalidPathChars(path)) return false;
+            try { return File.Exists(path); }
+            catch { return false; }
+        }
+
+        private static string MakeSafeZipEntry(string relPath, string prefixDir, string fallbackId, string ext)
+        {
+            string norm = (relPath ?? "").Replace('\\', '/').Trim().TrimStart('/');
+            bool validRel = !string.IsNullOrEmpty(norm)
+                && !ContainsInvalidPathChars(norm)
+                && norm.IndexOf(':') == -1
+                && !norm.Contains("..")
+                && norm.StartsWith(prefixDir + "/", StringComparison.OrdinalIgnoreCase);
+
+            if (validRel) return norm;
+            string safeExt = string.IsNullOrEmpty(ext) ? "" : ext;
+            if (ContainsInvalidPathChars(safeExt) || safeExt.IndexOf('/') >= 0 || safeExt.IndexOf('\\') >= 0) safeExt = "";
+            return prefixDir + "/" + fallbackId + safeExt;
+        }
+
+        private string ResolveMediaPath(string path)
+        {
+            string clean = JsonHelper.RepairLegacyPath(path);
+            if (string.IsNullOrEmpty(clean) || ContainsInvalidPathChars(clean)) return "";
+            try
+            {
+                return Path.IsPathRooted(clean) ? clean : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, clean);
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+        private string ImportMediaFile(string sourceFile, bool isVideo)
+        {
+            string cleanSource = JsonHelper.RepairLegacyPath(sourceFile);
+            if (string.IsNullOrEmpty(cleanSource)) return "";
+            if (_data != null && _data.Settings != null && _data.Settings.CopyMediaToLocal)
+            {
+                string subDir = isVideo ? "videos" : "images";
+                string targetDir = isVideo ? _videosDir : _imagesDir;
+                if (!Directory.Exists(targetDir)) Directory.CreateDirectory(targetDir);
+                string ext = SafeGetExtension(cleanSource);
+                string relPath = subDir + "/" + Guid.NewGuid().ToString("N") + ext;
+                string fullTarget = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, relPath);
+                File.Copy(cleanSource, fullTarget, true);
+                return relPath;
+            }
+            return cleanSource;
         }
 
         private void RestoreWindowBounds()
@@ -1676,48 +2140,23 @@ namespace HuahuaHelper
                 try { this.Icon = new Icon(_iconPath); } catch { }
             }
 
-            // 1. 顶部 Header（实色底 + 1px 底线）
-            _topBar = new Panel
+            // 1. 顶部 Header（OnPaintBackground 绘制分层液态玻璃，子控件透明继承零黑框）
+            _topBar = new GlassTopBarPanel
             {
                 Dock = DockStyle.Top,
                 Height = 72,
-                BackColor = WarmTheme.LightCardBg,
                 Padding = new Padding(12, 6, 12, 6)
             };
-            _topBar.Paint += (s, e) =>
-            {
-                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
-                GlassRenderer.DrawLiquidGlassPanel(e.Graphics, _topBar.ClientRectangle, isDark, 0);
-                Color lineCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
-                using (Pen p = new Pen(lineCol, 1))
-                {
-                    e.Graphics.DrawLine(p, 0, _topBar.Height - 1, _topBar.Width, _topBar.Height - 1);
-                }
-            };
 
-            // 头像彩蛋
-            _picAvatar = new PictureBox
+            // 头像彩蛋（圆形裁剪，彻底告别灰底方框）
+            _picAvatar = new CircleAvatarControl
             {
                 Size = new Size(24, 24),
                 Location = new Point(12, 8),
-                SizeMode = PictureBoxSizeMode.Zoom,
-                Cursor = Cursors.Hand
+                AvatarImage = EmbeddedAssets.GetAvatarImage(_avatarPath)
             };
             ToolTip tip = new ToolTip();
             tip.SetToolTip(_picAvatar, "点一点，看花花的原画");
-            _picAvatar.Image = EmbeddedAssets.GetAvatarImage(_avatarPath);
-            _picAvatar.Paint += (s, e) =>
-            {
-                if (WarmTheme.Current.IsPink && _picAvatar.Image != null)
-                {
-                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-                    Rectangle r = new Rectangle(1, 1, _picAvatar.Width - 3, _picAvatar.Height - 3);
-                    using (Pen ringPen = new Pen(WarmTheme.Orange, 2))
-                    {
-                        e.Graphics.DrawEllipse(ringPen, r);
-                    }
-                }
-            };
             _picAvatar.Click += (s, e) => ShowEasterEggDialog();
 
             _lblLogo = new Label
@@ -1725,6 +2164,7 @@ namespace HuahuaHelper
                 Text = "客服花花",
                 Font = new Font("Microsoft YaHei UI", 10.5F, FontStyle.Bold),
                 ForeColor = WarmTheme.LightTextPrimary,
+                BackColor = Color.Transparent,
                 Location = new Point(40, 9),
                 Padding = new Padding(0),
                 Margin = new Padding(0),
@@ -1748,14 +2188,12 @@ namespace HuahuaHelper
             tip.SetToolTip(_btnSettings, "设置");
             _btnSettings.Click += (s, e) => OpenSettingsDialog();
 
-            _chkTopMost = new CheckBox
+            _chkTopMost = new WarmCheckBox
             {
                 Text = "置顶",
                 Checked = true,
-                AutoSize = true,
-                Cursor = Cursors.Hand,
-                Font = new Font("Microsoft YaHei UI", 8.5F),
-                ForeColor = WarmTheme.LightTextPrimary
+                Size = new Size(48, 22),
+                Font = new Font("Microsoft YaHei UI", 8.5F)
             };
             _chkTopMost.CheckedChanged += (s, e) => this.TopMost = _chkTopMost.Checked;
 
@@ -1788,7 +2226,7 @@ namespace HuahuaHelper
                 Graphics g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
                 bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
-                Color bgCol = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightSearchBg;
+                Color bgCol = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightSearchBg;
                 Color iconCol = isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
 
                 Rectangle boxRect = new Rectangle(1, 1, _searchWrap.Width - 3, _searchWrap.Height - 3);
@@ -1853,29 +2291,36 @@ namespace HuahuaHelper
 
             _topBar.Controls.AddRange(new Control[] { _picAvatar, _lblLogo, _btnSettings, _chkTopMost, _btnAddPhrase, _searchWrap });
 
-            // 2. 分类导航条
+            // 2. 模式切换栏（文本 / 视频）
+            _modeBar = new ModeSwitchBar
+            {
+                Dock = DockStyle.Top,
+                Height = 34
+            };
+
+            // 3. 分类导航条
             _categoryBar = new CustomCategoryBar
             {
                 Dock = DockStyle.Top,
                 Height = 40
             };
-            _categoryBar.OnCategorySelected += (cat) => { _currentCat = cat; RefreshList(); };
+            _categoryBar.OnCategorySelected += (cat) => { ActiveCat = cat; RefreshList(); };
             _categoryBar.OnAddCategoryRequested += () => AddCategoryPrompt();
             _categoryBar.OnDeleteCurrentCategoryRequested += () => DeleteCurrentCategoryPrompt();
             _categoryBar.OnRenameCategoryRequested += (cat) => RenameCategoryPrompt(cat);
             _categoryBar.OnDeleteCategoryRequested += (cat) => DeleteCategory(cat);
 
-            // 3. 工作区列表
+            // 4. 工作区列表
             _phraseList = new MiniPhraseListView
             {
                 Dock = DockStyle.Fill,
                 BackColor = WarmTheme.LightPaperBg,
-                EmptyAvatarImage = _picAvatar.Image
+                EmptyAvatarImage = _picAvatar.AvatarImage
             };
             _phraseList.OnActionTriggered += (item, isSend) => SendToTarget(item, isSend);
             _phraseList.OnEditRequested += (item) => ShowAddOrEditDialog(item);
 
-            // 4. 底部状态栏
+            // 5. 底部状态栏
             _statusBar = new Panel
             {
                 Dock = DockStyle.Bottom,
@@ -1904,6 +2349,7 @@ namespace HuahuaHelper
 
             this.Controls.Add(_phraseList);
             this.Controls.Add(_categoryBar);
+            this.Controls.Add(_modeBar);
             this.Controls.Add(_topBar);
             this.Controls.Add(_statusBar);
 
@@ -1911,7 +2357,7 @@ namespace HuahuaHelper
             Action updateLayout = () =>
             {
                 int w = this.ClientSize.Width;
-                _btnAddPhrase.Location = new Point(w - 54, 8);
+                _btnAddPhrase.Location = new Point(w - _btnAddPhrase.Width - 10, 8);
                 _chkTopMost.Location = new Point(_btnAddPhrase.Left - _chkTopMost.Width - 6, 11);
                 _btnSettings.Location = new Point(_chkTopMost.Left - _btnSettings.Width - 6, 8);
                 _btnSettings.BringToFront();
@@ -1920,6 +2366,25 @@ namespace HuahuaHelper
                 _searchWrap.Width = w - 24;
                 _searchBox.Width = Math.Max(40, _searchWrap.Width - 34);
                 _phraseList.Invalidate();
+            };
+
+            _modeBar.OnModeChanged += (mode) =>
+            {
+                _currentMode = mode;
+                _phraseList.CurrentMode = mode;
+                if (mode == "video")
+                {
+                    _btnAddPhrase.Text = "+视频";
+                    _btnAddPhrase.Width = 52;
+                }
+                else
+                {
+                    _btnAddPhrase.Text = "+词";
+                    _btnAddPhrase.Width = 44;
+                }
+                updateLayout();
+                _categoryBar.SetCategories(ActiveCategories(), ActiveCat);
+                RefreshList();
             };
 
             this.Load += (s, e) => updateLayout();
@@ -1939,7 +2404,7 @@ namespace HuahuaHelper
             using (Form setDlg = new Form())
             {
                 setDlg.Text = "设置";
-                setDlg.Size = new Size(420, 678);
+                setDlg.Size = new Size(420, 760);
                 setDlg.StartPosition = FormStartPosition.CenterParent;
                 setDlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 setDlg.MaximizeBox = false;
@@ -2051,6 +2516,33 @@ namespace HuahuaHelper
 
                 string tempCustomBg = _data.Settings.CustomBgPath;
 
+                WarmCheckBox chkCopyMedia = new WarmCheckBox
+                {
+                    Text = "复制图片和视频到软件目录",
+                    Location = new Point(14, 142),
+                    Size = new Size(260, 22),
+                    Checked = _data.Settings.CopyMediaToLocal,
+                    IsDarkTheme = isDark,
+                    Font = new Font("Microsoft YaHei UI", 8.5F)
+                };
+                Label lblCopyDesc = new Label
+                {
+                    Text = "不勾选则直接读取电脑原位置，不占空间",
+                    Location = new Point(32, 166),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 8F),
+                    ForeColor = txtSec
+                };
+                Label lblRestoreTip = new Label
+                {
+                    Text = "提示：导入备份会让备份里面的图片和视频复制到软件目录里，会导致部分空间占用",
+                    Location = new Point(14, 186),
+                    MaximumSize = new Size(344, 0),
+                    AutoSize = true,
+                    Font = new Font("Microsoft YaHei UI", 8F),
+                    ForeColor = txtSec
+                };
+
                 btnChooseBg.Click += (s, e) =>
                 {
                     using (OpenFileDialog ofd = new OpenFileDialog())
@@ -2059,20 +2551,10 @@ namespace HuahuaHelper
                         ofd.Filter = "图片文件 (*.jpg;*.png;*.jpeg;*.bmp)|*.jpg;*.png;*.jpeg;*.bmp";
                         if (ofd.ShowDialog(setDlg) == DialogResult.OK)
                         {
-                            try
-                            {
-                                string ext = Path.GetExtension(ofd.FileName);
-                                string newBgName = "bg_" + Guid.NewGuid().ToString("N") + ext;
-                                string fullTarget = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, newBgName);
-                                File.Copy(ofd.FileName, fullTarget, true);
-                                tempCustomBg = newBgName;
-                                rbCustom.Checked = true;
-                                MessageBox.Show("背景图片已载入，点保存后生效。", "提示");
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show("加载背景图片失败: " + ex.Message, "提示");
-                            }
+                            // 自定义背景图始终直接识别原文件位置，不复制到软件目录
+                            tempCustomBg = ofd.FileName;
+                            rbCustom.Checked = true;
+                            MessageBox.Show("背景图片已载入，点保存后生效。", "提示");
                         }
                     }
                 };
@@ -2143,7 +2625,7 @@ namespace HuahuaHelper
                 Panel pnlBackup = new Panel
                 {
                     Location = new Point(16, 374),
-                    Size = new Size(372, 148),
+                    Size = new Size(372, 228),
                     BackColor = cardBg
                 };
                 paintCard(pnlBackup);
@@ -2161,7 +2643,7 @@ namespace HuahuaHelper
                 };
                 Label lblBackupDesc = new Label
                 {
-                    Text = "话术和图片打成一个包，换电脑一键恢复",
+                    Text = "话术、图片和视频打成一个包，换电脑一键恢复",
                     Location = new Point(14, 32),
                     AutoSize = true,
                     Font = new Font("Microsoft YaHei UI", 8F),
@@ -2215,7 +2697,7 @@ namespace HuahuaHelper
                 {
                     Text = "一键清理所有提示词",
                     Location = new Point(14, 102),
-                    Size = new Size(156, 32),
+                    Size = new Size(166, 32),
                     BaseNormal = cardBg,
                     BaseHover = isDark ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226),
                     BasePressed = cardBorder,
@@ -2224,23 +2706,24 @@ namespace HuahuaHelper
                 };
                 btnClearPhrases.Click += (s, e) =>
                 {
-                    if (_data.Phrases.Count == 0)
+                    int textCount = _data.Phrases.Count(p => string.IsNullOrEmpty(p.ItemType) || p.ItemType != "video");
+                    if (textCount == 0)
                     {
-                        MessageBox.Show("当前没有任何提示词，无需清理。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        MessageBox.Show("当前没有任何文本提示词，无需清理。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         return;
                     }
 
                     DialogResult r1 = MessageBox.Show(
-                        string.Format("确定要清理全部 {0} 条提示词吗？\n（分类名称将会保留，关联的附带图片将一并清理）", _data.Phrases.Count),
+                        string.Format("确定要清理全部 {0} 条文本提示词吗？\n（分类名称与视频快捷方式将会保留，关联的附带图片将一并清理）", textCount),
                         "确认清理所有提示词", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                     if (r1 != DialogResult.Yes) return;
 
                     DialogResult r2 = MessageBox.Show(
-                        "请再次确认：清空后无法撤销，是否立即删除所有提示词？",
+                        "请再次确认：清空后无法撤销，是否立即删除所有文本提示词？",
                         "二次确认", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
                     if (r2 != DialogResult.Yes) return;
 
-                    _data.Phrases.Clear();
+                    _data.Phrases.RemoveAll(p => string.IsNullOrEmpty(p.ItemType) || p.ItemType != "video");
                     try
                     {
                         if (Directory.Exists(_imagesDir))
@@ -2255,16 +2738,64 @@ namespace HuahuaHelper
 
                     SaveData();
                     RefreshList();
-                    MessageBox.Show("已成功清空所有提示词！", "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show("已成功清空所有文本提示词！", "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 };
 
-                pnlBackup.Controls.AddRange(new Control[] { picIconBackup, lblBackupTitle, lblBackupDesc, btnExport, btnImport, btnOpenDir, btnClearPhrases });
+                LiquidGlassButtonControl btnClearVideos = new LiquidGlassButtonControl
+                {
+                    Text = "一键清理所有视频",
+                    Location = new Point(190, 102),
+                    Size = new Size(166, 32),
+                    BaseNormal = cardBg,
+                    BaseHover = isDark ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226),
+                    BasePressed = cardBorder,
+                    BorderColor = cardBorder,
+                    TextColor = WarmTheme.DangerRed
+                };
+                btnClearVideos.Click += (s, e) =>
+                {
+                    int videoCount = _data.Phrases.Count(p => p.ItemType == "video");
+                    if (videoCount == 0)
+                    {
+                        MessageBox.Show("当前没有任何视频快捷方式，无需清理。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        return;
+                    }
+
+                    DialogResult r1 = MessageBox.Show(
+                        string.Format("确定要清理全部 {0} 条视频快捷方式吗？\n（分类名称与文本提示词将会保留，缓存视频文件将一并删除）", videoCount),
+                        "确认清理所有视频", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+                    if (r1 != DialogResult.Yes) return;
+
+                    DialogResult r2 = MessageBox.Show(
+                        "请再次确认：清空后无法撤销，是否立即删除所有视频快捷方式？",
+                        "二次确认", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
+                    if (r2 != DialogResult.Yes) return;
+
+                    _data.Phrases.RemoveAll(p => p.ItemType == "video");
+                    try
+                    {
+                        if (Directory.Exists(_videosDir))
+                        {
+                            foreach (string f in Directory.GetFiles(_videosDir))
+                            {
+                                try { File.Delete(f); } catch { }
+                            }
+                        }
+                    }
+                    catch { }
+
+                    SaveData();
+                    RefreshList();
+                    MessageBox.Show("已成功清空所有视频快捷方式！", "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                };
+
+                pnlBackup.Controls.AddRange(new Control[] { picIconBackup, lblBackupTitle, lblBackupDesc, btnExport, btnImport, btnOpenDir, btnClearPhrases, btnClearVideos, chkCopyMedia, lblCopyDesc, lblRestoreTip });
 
                 // 4. 开源项目地址卡片
                 string repoUrl = "https://github.com/l1011186781-commits/kefu-huahua";
                 Panel pnlAbout = new Panel
                 {
-                    Location = new Point(16, 532),
+                    Location = new Point(16, 612),
                     Size = new Size(372, 54),
                     BackColor = cardBg
                 };
@@ -2302,7 +2833,7 @@ namespace HuahuaHelper
                 LiquidGlassButtonControl btnSave = new LiquidGlassButtonControl
                 {
                     Text = "保存",
-                    Location = new Point(216, 598),
+                    Location = new Point(216, 678),
                     Size = new Size(88, 32),
                     Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
                     BaseNormal = WarmTheme.Orange,
@@ -2316,7 +2847,7 @@ namespace HuahuaHelper
                 LiquidGlassButtonControl btnCancel = new LiquidGlassButtonControl
                 {
                     Text = "取消",
-                    Location = new Point(312, 598),
+                    Location = new Point(312, 678),
                     Size = new Size(76, 32),
                     BaseNormal = cardBg,
                     BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
@@ -2333,6 +2864,13 @@ namespace HuahuaHelper
                     lblWhiteDesc.Top = rbWhite.Bottom + 2;
                     lblBlackDesc.Top = rbBlack.Bottom + 2;
                     lblCustomDesc.Top = rbCustom.Bottom + 2;
+                    lblCopyDesc.Top = chkCopyMedia.Bottom + 2;
+                    lblRestoreTip.Top = lblCopyDesc.Bottom + 5;
+                    pnlBackup.Height = Math.Max(228, lblRestoreTip.Bottom + 12);
+                    pnlAbout.Top = pnlBackup.Bottom + 10;
+                    btnSave.Top = pnlAbout.Bottom + 12;
+                    btnCancel.Top = btnSave.Top;
+                    setDlg.ClientSize = new Size(404, btnSave.Bottom + 14);
                     picIconImg.Left = rbCustom.Right + 4;
                     picIconImg.Top = rbCustom.Top + (rbCustom.Height - picIconImg.Height) / 2;
                 };
@@ -2348,6 +2886,7 @@ namespace HuahuaHelper
                     else _data.Settings.ThemeType = "white";
 
                     _data.Settings.CustomBgPath = tempCustomBg;
+                    _data.Settings.CopyMediaToLocal = chkCopyMedia.Checked;
 
                     if (rbF1.Checked) _data.Settings.FontSizeLevel = 1;
                     else if (rbF2.Checked) _data.Settings.FontSizeLevel = 2;
@@ -2376,7 +2915,7 @@ namespace HuahuaHelper
             if (_customBgImg != null) { _customBgImg.Dispose(); _customBgImg = null; }
             if (theme == "custom" && !string.IsNullOrEmpty(_data.Settings.CustomBgPath))
             {
-                string fullImg = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, _data.Settings.CustomBgPath);
+                string fullImg = ResolveMediaPath(_data.Settings.CustomBgPath);
                 if (File.Exists(fullImg))
                 {
                     try { _customBgImg = Image.FromFile(fullImg); } catch { }
@@ -2385,16 +2924,17 @@ namespace HuahuaHelper
 
             this.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
 
-            Color topBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
             Color textCol = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
             Color secCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
-            Color boxBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightSearchBg;
+            Color boxBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightSearchBg;
 
-            _topBar.BackColor = topBg;
+            _topBar.IsDarkTheme = isDark;
             _topBar.Invalidate();
+            _picAvatar.IsDarkTheme = isDark;
             _picAvatar.Invalidate();
             _lblLogo.ForeColor = textCol;
-            _chkTopMost.ForeColor = textCol;
+            _chkTopMost.IsDarkTheme = isDark;
+            _chkTopMost.Invalidate();
             _searchBox.BackColor = boxBg;
             if (_searchBox.Text == SearchPlaceholder)
                 _searchBox.ForeColor = isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
@@ -2407,7 +2947,7 @@ namespace HuahuaHelper
             _btnSettings.BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg;
             _btnSettings.BasePressed = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
             _btnSettings.BorderColor = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
-            _btnSettings.TextColor = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
+            _btnSettings.TextColor = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightChipText;
             _btnSettings.Invalidate();
 
             _btnAddPhrase.IsDarkTheme = isDark;
@@ -2424,61 +2964,283 @@ namespace HuahuaHelper
                 _lblTarget.ForeColor = secCol;
             }
 
+            _modeBar.IsDarkTheme = isDark;
+            _modeBar.Invalidate();
+
             _categoryBar.IsDarkTheme = isDark;
             _categoryBar.Invalidate();
 
             _phraseList.SetTheme(theme, _customBgImg);
         }
 
+        private void RunWithBusyDialog(string message, Action work, Action onDone)
+        {
+            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+            using (Form busyDlg = new Form())
+            {
+                busyDlg.Text = "处理中";
+                busyDlg.Size = new Size(340, 110);
+                busyDlg.StartPosition = FormStartPosition.CenterParent;
+                busyDlg.FormBorderStyle = FormBorderStyle.FixedDialog;
+                busyDlg.ControlBox = false;
+                busyDlg.ShowInTaskbar = false;
+                busyDlg.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+                busyDlg.Font = new Font("Microsoft YaHei UI", 9F);
+
+                Label lbl = new Label
+                {
+                    Text = message,
+                    Dock = DockStyle.Fill,
+                    TextAlign = ContentAlignment.MiddleCenter,
+                    ForeColor = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary
+                };
+                busyDlg.Controls.Add(lbl);
+
+                Exception err = null;
+                busyDlg.Shown += (s, e) =>
+                {
+                    Task.Factory.StartNew(() =>
+                    {
+                        try { work(); }
+                        catch (Exception ex) { err = ex; }
+                        if (busyDlg.IsHandleCreated && !busyDlg.IsDisposed)
+                        {
+                            busyDlg.BeginInvoke((Action)(() => busyDlg.Close()));
+                        }
+                    });
+                };
+
+                busyDlg.ShowDialog(this);
+                if (err != null) throw err;
+                if (onDone != null) onDone();
+            }
+        }
+
+        private static string EnsureUniqueSafeId(string id, HashSet<string> usedIds)
+        {
+            bool valid = !string.IsNullOrEmpty(id);
+            if (valid)
+            {
+                for (int i = 0; i < id.Length; i++)
+                {
+                    char c = id[i];
+                    bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                              (c >= '0' && c <= '9') || c == '-' || c == '_';
+                    if (!ok) { valid = false; break; }
+                }
+            }
+            string candidate = valid ? id : Guid.NewGuid().ToString("N");
+            while (!usedIds.Add(candidate))
+            {
+                candidate = Guid.NewGuid().ToString("N");
+            }
+            return candidate;
+        }
+
+        private string PackPhraseMediaEntry(
+            ZipArchive archive,
+            HashSet<string> packedEntries,
+            string rawPath,
+            string prefixDir,
+            string safeId,
+            CompressionLevel level,
+            string itemTitle,
+            string mediaLabel,
+            List<string> missingMedia)
+        {
+            if (string.IsNullOrEmpty(rawPath)) return "";
+            string fullPath = ResolveMediaPath(rawPath);
+            if (!string.IsNullOrEmpty(fullPath) && SafeFileExists(fullPath))
+            {
+                string ext = SafeGetExtension(fullPath);
+                string entryName = MakeSafeZipEntry(rawPath, prefixDir, safeId, ext);
+                if (packedEntries.Add(entryName))
+                {
+                    archive.CreateEntryFromFile(fullPath, entryName, level);
+                }
+                return entryName;
+            }
+
+            if (missingMedia != null)
+            {
+                string label = string.IsNullOrEmpty(itemTitle) ? mediaLabel : (itemTitle + " (" + mediaLabel + ")");
+                missingMedia.Add(label);
+            }
+            return JsonHelper.RepairLegacyPath(rawPath);
+        }
+
+        private void RepairInMemoryPathsBeforeExport()
+        {
+            bool modified = false;
+            if (_data != null && _data.Settings != null)
+            {
+                bool bgChanged;
+                string fixedBg = JsonHelper.RepairLegacyPath(_data.Settings.CustomBgPath, out bgChanged);
+                if (bgChanged)
+                {
+                    _data.Settings.CustomBgPath = fixedBg;
+                    modified = true;
+                }
+            }
+            if (_data != null && _data.Phrases != null)
+            {
+                foreach (var p in _data.Phrases)
+                {
+                    bool imgChanged;
+                    string fixedImg = JsonHelper.RepairLegacyPath(p.ImagePath, out imgChanged);
+                    if (imgChanged) { p.ImagePath = fixedImg; modified = true; }
+
+                    bool vidChanged;
+                    string fixedVid = JsonHelper.RepairLegacyPath(p.VideoPath, out vidChanged);
+                    if (vidChanged) { p.VideoPath = fixedVid; modified = true; }
+                }
+            }
+            if (modified) SaveData();
+        }
+
         private void ExportBackupData()
         {
-            if (_data.Phrases.Count == 0 && _data.Categories.Count == 0)
+            if (_data.Phrases.Count == 0 && _data.Categories.Count == 0 && _data.VideoCategories.Count == 0)
             {
-                MessageBox.Show("当前没有任何分类或提示词，暂无需备份！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show("当前没有任何分类、文本提示词或视频，暂无需备份！", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
             using (SaveFileDialog sfd = new SaveFileDialog())
             {
-                sfd.Title = "导出客服花花全量备份包";
+                sfd.Title = "导出客服花花全量备份包（文本 + 图片 + 视频）";
                 string timeStr = DateTime.Now.ToString("yyyyMMdd_HHmm");
                 sfd.FileName = string.Format("客服花花备份_{0}.zip", timeStr);
                 sfd.Filter = "花花备份文件 (*.zip)|*.zip|所有文件 (*.*)|*.*";
 
                 if (sfd.ShowDialog(this) == DialogResult.OK)
                 {
-                    string tempDir = Path.Combine(Path.GetTempPath(), "HuahuaBackup_" + Guid.NewGuid().ToString("N"));
                     try
                     {
-                        Directory.CreateDirectory(tempDir);
+                        RepairInMemoryPathsBeforeExport();
                         SaveData();
-                        File.Copy(_storagePath, Path.Combine(tempDir, "phrases.json"), true);
+                        string destZip = sfd.FileName;
 
-                        if (Directory.Exists(_imagesDir))
+                        AppData exportData = new AppData();
+                        exportData.Settings = new AppSettings
                         {
-                            string targetImgDir = Path.Combine(tempDir, "images");
-                            Directory.CreateDirectory(targetImgDir);
-                            foreach (string imgFile in Directory.GetFiles(_imagesDir))
-                            {
-                                string dest = Path.Combine(targetImgDir, Path.GetFileName(imgFile));
-                                File.Copy(imgFile, dest, true);
-                            }
+                            FontSizeLevel = _data.Settings.FontSizeLevel,
+                            ThemeType = _data.Settings.ThemeType,
+                            ColorScheme = _data.Settings.ColorScheme,
+                            CustomBgPath = JsonHelper.RepairLegacyPath(_data.Settings.CustomBgPath),
+                            CopyMediaToLocal = _data.Settings.CopyMediaToLocal,
+                            WindowWidth = _data.Settings.WindowWidth,
+                            WindowHeight = _data.Settings.WindowHeight,
+                            WindowX = _data.Settings.WindowX,
+                            WindowY = _data.Settings.WindowY,
+                            HasWindowPos = _data.Settings.HasWindowPos
+                        };
+                        exportData.Categories.AddRange(_data.Categories);
+                        exportData.VideoCategories.AddRange(_data.VideoCategories);
+
+                        List<PhraseItem> snapshotPhrases = new List<PhraseItem>(_data.Phrases.Count);
+                        var usedIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                        foreach (var p in _data.Phrases)
+                        {
+                            PhraseItem cloned = new PhraseItem(p.Category, p.Title, p.Content, p.ImagePath, p.ItemType, p.VideoPath);
+                            cloned.Id = EnsureUniqueSafeId(p.Id, usedIds);
+                            snapshotPhrases.Add(cloned);
                         }
 
-                        if (File.Exists(sfd.FileName)) File.Delete(sfd.FileName);
-                        ZipFile.CreateFromDirectory(tempDir, sfd.FileName, CompressionLevel.Optimal, false);
+                        var missingMedia = new List<string>();
 
-                        MessageBox.Show(
-                            string.Format("备份成功！\n\n备份包已保存至：\n{0}\n\n换电脑时，将此文件发到新电脑，在「设置 -> 备份与换机 -> 导入备份包」即可恢复所有话术与图片。", sfd.FileName),
-                            "备份成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        RunWithBusyDialog("正在打包备份（包含文本、图片、视频与背景），请稍候...", () =>
+                        {
+                            if (File.Exists(destZip)) File.Delete(destZip);
+
+                            var packedEntries = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                            using (ZipArchive archive = ZipFile.Open(destZip, ZipArchiveMode.Create))
+                            {
+                                // 打包自定义背景图片（支持原位置或软件目录）
+                                if (!string.IsNullOrEmpty(exportData.Settings.CustomBgPath))
+                                {
+                                    string fullBg = ResolveMediaPath(exportData.Settings.CustomBgPath);
+                                    if (!string.IsNullOrEmpty(fullBg) && SafeFileExists(fullBg))
+                                    {
+                                        string bgExt = SafeGetExtension(fullBg);
+                                        string bgEntryName = MakeSafeZipEntry(
+                                            exportData.Settings.CustomBgPath,
+                                            "images",
+                                            "custom_bg_" + Guid.NewGuid().ToString("N").Substring(0, 8),
+                                            bgExt);
+                                        if (packedEntries.Add(bgEntryName))
+                                            archive.CreateEntryFromFile(fullBg, bgEntryName, CompressionLevel.Fastest);
+                                        exportData.Settings.CustomBgPath = bgEntryName;
+                                    }
+                                    else
+                                    {
+                                        missingMedia.Add("自定义背景图");
+                                        exportData.Settings.CustomBgPath = "";
+                                    }
+                                }
+
+                                foreach (var cloned in snapshotPhrases)
+                                {
+                                    cloned.ImagePath = PackPhraseMediaEntry(
+                                        archive, packedEntries, cloned.ImagePath, "images", cloned.Id,
+                                        CompressionLevel.Fastest, cloned.Title, "图片", missingMedia);
+
+                                    cloned.VideoPath = PackPhraseMediaEntry(
+                                        archive, packedEntries, cloned.VideoPath, "videos", cloned.Id,
+                                        CompressionLevel.NoCompression, cloned.Title, "视频", missingMedia);
+
+                                    exportData.Phrases.Add(cloned);
+                                }
+
+                                // 兼容打包本地已有但未在条目标记的文件
+                                if (Directory.Exists(_imagesDir))
+                                {
+                                    foreach (string imgFile in Directory.GetFiles(_imagesDir))
+                                    {
+                                        string fileName = SafeGetFileName(imgFile);
+                                        if (string.IsNullOrEmpty(fileName)) continue;
+                                        string entryName = "images/" + fileName;
+                                        if (packedEntries.Add(entryName))
+                                            archive.CreateEntryFromFile(imgFile, entryName, CompressionLevel.Fastest);
+                                    }
+                                }
+                                if (Directory.Exists(_videosDir))
+                                {
+                                    foreach (string vidFile in Directory.GetFiles(_videosDir))
+                                    {
+                                        string fileName = SafeGetFileName(vidFile);
+                                        if (string.IsNullOrEmpty(fileName)) continue;
+                                        string entryName = "videos/" + fileName;
+                                        if (packedEntries.Add(entryName))
+                                            archive.CreateEntryFromFile(vidFile, entryName, CompressionLevel.NoCompression);
+                                    }
+                                }
+
+                                ZipArchiveEntry jsonEntry = archive.CreateEntry("phrases.json", CompressionLevel.Optimal);
+                                using (StreamWriter sw = new StreamWriter(jsonEntry.Open(), Encoding.UTF8))
+                                {
+                                    sw.Write(JsonHelper.Serialize(exportData));
+                                }
+                            }
+                        }, () =>
+                        {
+                            string baseMsg = string.Format(
+                                "备份成功！\n\n备份包已保存至：\n{0}\n\n已包含所有分类、文本话术、附带图片、视频文件与背景设置；换电脑时在「设置 -> 备份与换机 -> 导入备份包」即可恢复。",
+                                destZip);
+                            if (missingMedia.Count > 0)
+                            {
+                                int showCount = Math.Min(missingMedia.Count, 5);
+                                string detail = string.Join("、", missingMedia.Take(showCount).ToArray());
+                                if (missingMedia.Count > showCount) detail += " 等";
+                                baseMsg += string.Format("\n\n注意：有 {0} 个引用的媒体文件在原位置已找不到（{1}），已跳过文件打包但保留话术记录。", missingMedia.Count, detail);
+                            }
+                            MessageBox.Show(baseMsg, "备份成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        });
                     }
                     catch (Exception ex)
                     {
                         MessageBox.Show("备份过程中发生异常: " + ex.Message, "备份失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                    finally
-                    {
-                        try { if (Directory.Exists(tempDir)) Directory.Delete(tempDir, true); } catch { }
                     }
                 }
             }
@@ -2494,46 +3256,72 @@ namespace HuahuaHelper
                 if (ofd.ShowDialog(this) == DialogResult.OK)
                 {
                     var confirm = MessageBox.Show(
-                        "导入备份将恢复该备份包中的所有【分类】、【提示词】以及【附带图片】。\n是否确认导入？",
+                        "导入备份将恢复该备份包中的所有【文本/视频分类】、【话术】、【附带图片】以及【视频文件】。\n注意：导入备份会让备份里面的图片和视频复制到软件目录里，会导致部分空间占用。\n是否确认导入？",
                         "确认导入备份", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 
                     if (confirm != DialogResult.Yes) return;
 
                     string tempExtractDir = Path.Combine(Path.GetTempPath(), "HuahuaRestore_" + Guid.NewGuid().ToString("N"));
+                    bool validBackup = true;
                     try
                     {
-                        Directory.CreateDirectory(tempExtractDir);
-                        ZipFile.ExtractToDirectory(ofd.FileName, tempExtractDir);
-
-                        string backupJson = Path.Combine(tempExtractDir, "phrases.json");
-                        if (!File.Exists(backupJson))
+                        string zipFile = ofd.FileName;
+                        RunWithBusyDialog("正在解压并恢复数据（包含视频文件），请稍候...", () =>
                         {
-                            MessageBox.Show("无效的备份文件：未在该文件中检测到 phrases.json 数据！", "导入失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                            return;
-                        }
+                            Directory.CreateDirectory(tempExtractDir);
+                            ZipFile.ExtractToDirectory(zipFile, tempExtractDir);
 
-                        File.Copy(backupJson, _storagePath, true);
-
-                        string backupImgDir = Path.Combine(tempExtractDir, "images");
-                        if (Directory.Exists(backupImgDir))
-                        {
-                            if (!Directory.Exists(_imagesDir)) Directory.CreateDirectory(_imagesDir);
-                            foreach (string imgFile in Directory.GetFiles(backupImgDir))
+                            string backupJson = Path.Combine(tempExtractDir, "phrases.json");
+                            if (!File.Exists(backupJson))
                             {
-                                string dest = Path.Combine(_imagesDir, Path.GetFileName(imgFile));
-                                File.Copy(imgFile, dest, true);
+                                validBackup = false;
+                                return;
                             }
-                        }
 
-                        LoadData();
-                        ApplySettings();
-                        _currentCat = "全部";
-                        _categoryBar.SetCategories(_data.Categories, _currentCat);
-                        RefreshList();
+                            File.Copy(backupJson, _storagePath, true);
 
-                        MessageBox.Show(
-                            string.Format("恢复完成！已成功复原 {0} 个分类、{1} 条话术。", _data.Categories.Count, _data.Phrases.Count),
-                            "恢复成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            string backupImgDir = Path.Combine(tempExtractDir, "images");
+                            if (Directory.Exists(backupImgDir))
+                            {
+                                if (!Directory.Exists(_imagesDir)) Directory.CreateDirectory(_imagesDir);
+                                foreach (string imgFile in Directory.GetFiles(backupImgDir))
+                                {
+                                    string dest = Path.Combine(_imagesDir, Path.GetFileName(imgFile));
+                                    File.Copy(imgFile, dest, true);
+                                }
+                            }
+
+                            string backupVidDir = Path.Combine(tempExtractDir, "videos");
+                            if (Directory.Exists(backupVidDir))
+                            {
+                                if (!Directory.Exists(_videosDir)) Directory.CreateDirectory(_videosDir);
+                                foreach (string vidFile in Directory.GetFiles(backupVidDir))
+                                {
+                                    string dest = Path.Combine(_videosDir, Path.GetFileName(vidFile));
+                                    File.Copy(vidFile, dest, true);
+                                }
+                            }
+                        }, () =>
+                        {
+                            if (!validBackup)
+                            {
+                                MessageBox.Show("无效的备份文件：未在该文件中检测到 phrases.json 数据！", "导入失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                return;
+                            }
+
+                            LoadData();
+                            ApplySettings();
+                            _currentTextCat = "全部";
+                            _currentVideoCat = "全部";
+                            _categoryBar.SetCategories(ActiveCategories(), ActiveCat);
+                            RefreshList();
+
+                            int textCnt = _data.Phrases.Count(p => string.IsNullOrEmpty(p.ItemType) || p.ItemType != "video");
+                            int vidCnt = _data.Phrases.Count(p => p.ItemType == "video");
+                            MessageBox.Show(
+                                string.Format("恢复完成！\n已成功复原 {0} 条文本话术、{1} 条视频快捷方式。", textCnt, vidCnt),
+                                "恢复成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        });
                     }
                     catch (Exception ex)
                     {
@@ -2549,7 +3337,10 @@ namespace HuahuaHelper
 
         private void ShowEasterEggDialog()
         {
-            if (!File.Exists(_avatarPath)) return;
+            Image eggImg = EmbeddedAssets.GetAvatarImage(_avatarPath);
+            if (eggImg == null) return;
+
+            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
 
             using (Form eggForm = new Form())
             {
@@ -2559,7 +3350,7 @@ namespace HuahuaHelper
                 eggForm.FormBorderStyle = FormBorderStyle.FixedDialog;
                 eggForm.MaximizeBox = false;
                 eggForm.MinimizeBox = false;
-                eggForm.BackColor = Color.White;
+                eggForm.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
                 if (this.Icon != null) eggForm.Icon = this.Icon;
 
                 PictureBox pic = new PictureBox
@@ -2567,8 +3358,9 @@ namespace HuahuaHelper
                     Dock = DockStyle.Top,
                     Height = 310,
                     SizeMode = PictureBoxSizeMode.Zoom,
-                    Image = Image.FromFile(_avatarPath),
-                    Padding = new Padding(10)
+                    Image = eggImg,
+                    Padding = new Padding(10),
+                    BackColor = Color.Transparent
                 };
 
                 Label lblText = new Label
@@ -2577,7 +3369,7 @@ namespace HuahuaHelper
                     Text = "「正在努力帮主人回复客户呢！」\n点击任意处或按 ESC 返回",
                     TextAlign = ContentAlignment.MiddleCenter,
                     Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular),
-                    ForeColor = WarmTheme.LightTextSecondary
+                    ForeColor = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary
                 };
 
                 eggForm.Controls.Add(lblText);
@@ -2622,11 +3414,16 @@ namespace HuahuaHelper
         private void RefreshList()
         {
             string keyword = (_searchBox.Text == SearchPlaceholder) ? "" : _searchBox.Text.Trim();
-            string catFilter = _currentCat;
+            string catFilter = ActiveCat;
+            string modeFilter = _currentMode;
             bool hasKeyword = !string.IsNullOrEmpty(keyword);
 
             Func<PhraseItem, bool> matchFunc = (item) =>
             {
+                string itemType = string.IsNullOrEmpty(item.ItemType) ? "text" : item.ItemType;
+                if (itemType != modeFilter)
+                    return false;
+
                 if (catFilter != "全部" && item.Category != catFilter)
                     return false;
 
@@ -2651,6 +3448,8 @@ namespace HuahuaHelper
                 filtered = _data.Phrases.Where(matchFunc).ToList();
             }
 
+            _modeBar.ItemCount = filtered.Count;
+            _modeBar.Invalidate();
             _phraseList.UpdateData(filtered);
         }
 
@@ -2662,9 +3461,27 @@ namespace HuahuaHelper
                 return;
             }
 
-            bool hasImage = !string.IsNullOrEmpty(item.ImagePath);
-            string fullImgPath = hasImage ? Path.Combine(AppDomain.CurrentDomain.BaseDirectory, item.ImagePath) : "";
+            bool isVideo = (item.ItemType == "video");
+            string fullVideoPath = isVideo ? ResolveMediaPath(item.VideoPath) : "";
+            bool videoFileValid = false;
+            if (isVideo && !string.IsNullOrEmpty(fullVideoPath))
+            {
+                videoFileValid = File.Exists(fullVideoPath);
+                if (!videoFileValid)
+                {
+                    MessageBox.Show("找不到视频文件：\n" + fullVideoPath, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+            }
+
+            bool hasImage = !isVideo && !string.IsNullOrEmpty(item.ImagePath);
+            string fullImgPath = hasImage ? ResolveMediaPath(item.ImagePath) : "";
             bool imgFileValid = hasImage && File.Exists(fullImgPath);
+            if (hasImage && !imgFileValid)
+            {
+                MessageBox.Show("找不到图片文件：\n" + fullImgPath, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
             bool hasText = !string.IsNullOrEmpty(item.Content);
 
             // 1. 先发送文本内容
@@ -2688,7 +3505,7 @@ namespace HuahuaHelper
                     keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                 }
 
-                if (imgFileValid) Thread.Sleep(120);
+                if (imgFileValid || videoFileValid) Thread.Sleep(150);
             }
 
             // 2. 紧接着发送图片
@@ -2724,36 +3541,75 @@ namespace HuahuaHelper
                     keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
                 }
             }
+
+            // 3. 发送视频快捷方式（FileDrop 剪贴板粘贴）
+            if (videoFileValid)
+            {
+                try
+                {
+                    var fileList = new System.Collections.Specialized.StringCollection();
+                    fileList.Add(fullVideoPath);
+                    Clipboard.SetFileDropList(fileList);
+                }
+                catch
+                {
+                    try
+                    {
+                        Thread.Sleep(40);
+                        var fileList = new System.Collections.Specialized.StringCollection();
+                        fileList.Add(fullVideoPath);
+                        Clipboard.SetFileDropList(fileList);
+                    }
+                    catch { }
+                }
+
+                SetForegroundWindow(_lastTargetHwnd);
+                Thread.Sleep(80);
+
+                keybd_event(VK_CONTROL, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_V, 0, 0, UIntPtr.Zero);
+                keybd_event(VK_V, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                keybd_event(VK_CONTROL, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+
+                if (sendEnter)
+                {
+                    Thread.Sleep(260);
+                    keybd_event(VK_RETURN, 0, 0, UIntPtr.Zero);
+                    keybd_event(VK_RETURN, 0, KEYEVENTF_KEYUP, UIntPtr.Zero);
+                }
+            }
         }
 
         private void AddCategoryPrompt()
         {
-            string name = PromptInput("新建分类", "请输入新分类名称：", "");
+            string title = (_currentMode == "video") ? "新建视频分类" : "新建文本分类";
+            string name = PromptInput(title, "请输入新分类名称：", "");
             if (!string.IsNullOrWhiteSpace(name))
             {
                 name = name.Trim();
-                if (_data.Categories.Contains(name))
+                var list = ActiveCategories();
+                if (list.Contains(name))
                 {
                     MessageBox.Show("该分类已存在！", "提示");
                     return;
                 }
-                _data.Categories.Add(name);
-                _currentCat = name;
+                list.Add(name);
+                ActiveCat = name;
                 SaveData();
-                _categoryBar.SetCategories(_data.Categories, _currentCat);
+                _categoryBar.SetCategories(list, ActiveCat);
                 RefreshList();
             }
         }
 
         private void DeleteCurrentCategoryPrompt()
         {
-            if (_currentCat == "全部")
+            if (ActiveCat == "全部")
             {
                 MessageBox.Show("【全部】为系统默认聚合分类，不可删除哦！\n请先点击想要删除的具体分类，然后再点击 [-] 删除。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
 
-            DeleteCategory(_currentCat);
+            DeleteCategory(ActiveCat);
         }
 
         private void RenameCategoryPrompt(string oldName)
@@ -2762,33 +3618,37 @@ namespace HuahuaHelper
             if (!string.IsNullOrWhiteSpace(newName) && newName != oldName)
             {
                 newName = newName.Trim();
-                int idx = _data.Categories.IndexOf(oldName);
-                if (idx >= 0) _data.Categories[idx] = newName;
+                var list = ActiveCategories();
+                int idx = list.IndexOf(oldName);
+                if (idx >= 0) list[idx] = newName;
 
                 foreach (var p in _data.Phrases)
                 {
-                    if (p.Category == oldName) p.Category = newName;
+                    string itemType = string.IsNullOrEmpty(p.ItemType) ? "text" : p.ItemType;
+                    if (itemType == _currentMode && p.Category == oldName) p.Category = newName;
                 }
 
-                if (_currentCat == oldName) _currentCat = newName;
+                if (ActiveCat == oldName) ActiveCat = newName;
                 SaveData();
-                _categoryBar.SetCategories(_data.Categories, _currentCat);
+                _categoryBar.SetCategories(list, ActiveCat);
                 RefreshList();
             }
         }
 
         private void DeleteCategory(string cat)
         {
-            if (MessageBox.Show("确定删除分类【" + cat + "】吗？\n该分类下的话术将自动归入【未分类】。", "确认删除分类", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (MessageBox.Show("确定删除分类【" + cat + "】吗？\n该分类下的内容将自动归入【未分类】。", "确认删除分类", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
             {
-                _data.Categories.Remove(cat);
+                var list = ActiveCategories();
+                list.Remove(cat);
                 foreach (var p in _data.Phrases)
                 {
-                    if (p.Category == cat) p.Category = "未分类";
+                    string itemType = string.IsNullOrEmpty(p.ItemType) ? "text" : p.ItemType;
+                    if (itemType == _currentMode && p.Category == cat) p.Category = "未分类";
                 }
-                _currentCat = "全部";
+                ActiveCat = "全部";
                 SaveData();
-                _categoryBar.SetCategories(_data.Categories, _currentCat);
+                _categoryBar.SetCategories(list, ActiveCat);
                 RefreshList();
             }
         }
@@ -2796,28 +3656,43 @@ namespace HuahuaHelper
         private void ShowAddOrEditDialog(PhraseItem editItem)
         {
             bool isEditing = (editItem != null);
+            bool isVideoMode = isEditing ? (editItem.ItemType == "video") : (_currentMode == "video");
+            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+            Color dlgBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            Color cardBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+            Color bdrCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+            Color txtCol = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+            Color secCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+
             using (Form dlg = new Form())
             {
-                dlg.Text = isEditing ? "修改话术" : "添加话术";
-                dlg.Size = new Size(390, 440);
+                if (isVideoMode)
+                    dlg.Text = isEditing ? "修改视频快捷方式" : "添加视频快捷方式";
+                else
+                    dlg.Text = isEditing ? "修改话术" : "添加话术";
+
+                dlg.Size = new Size(424, 440);
                 dlg.StartPosition = FormStartPosition.CenterParent;
                 dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
                 dlg.MaximizeBox = false;
                 dlg.MinimizeBox = false;
+                dlg.BackColor = dlgBg;
+                dlg.ForeColor = txtCol;
                 dlg.Font = new Font("Microsoft YaHei UI", 9F);
                 dlg.AllowDrop = true;
                 if (this.Icon != null) dlg.Icon = this.Icon;
 
-                Label lblCat = new Label { Text = "分类：", Location = new Point(16, 18), AutoSize = true };
-                ComboBox cmbCat = new ComboBox { Location = new Point(85, 15), Width = 265, DropDownStyle = ComboBoxStyle.DropDownList };
+                Label lblCat = new Label { Text = "分类：", Location = new Point(16, 18), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
+                ComboBox cmbCat = new ComboBox { Location = new Point(108, 15), Width = 280, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = cardBg, ForeColor = txtCol };
                 
-                if (_data.Categories.Count == 0)
+                var dialogCats = isVideoMode ? _data.VideoCategories : _data.Categories;
+                if (dialogCats.Count == 0)
                 {
                     cmbCat.Items.Add("未分类");
                 }
                 else
                 {
-                    foreach (var c in _data.Categories) cmbCat.Items.Add(c);
+                    foreach (var c in dialogCats) cmbCat.Items.Add(c);
                 }
 
                 if (isEditing)
@@ -2825,37 +3700,39 @@ namespace HuahuaHelper
                     if (!cmbCat.Items.Contains(editItem.Category)) cmbCat.Items.Add(editItem.Category);
                     cmbCat.SelectedItem = editItem.Category;
                 }
-                else if (_currentCat != "全部" && cmbCat.Items.Contains(_currentCat))
+                else if (ActiveCat != "全部" && cmbCat.Items.Contains(ActiveCat))
                 {
-                    cmbCat.SelectedItem = _currentCat;
+                    cmbCat.SelectedItem = ActiveCat;
                 }
                 else
                 {
                     cmbCat.SelectedIndex = 0;
                 }
 
-                Label lblTitle = new Label { Text = "提示词：", Location = new Point(16, 55), AutoSize = true };
-                TextBox txtTitle = new TextBox { Location = new Point(85, 52), Width = 265, Text = isEditing ? editItem.Title : "" };
+                Label lblTitle = new Label { Text = isVideoMode ? "视频名称：" : "提示词：", Location = new Point(16, 55), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
+                TextBox txtTitle = new TextBox { Location = new Point(108, 52), Width = 280, BackColor = cardBg, ForeColor = txtCol, Text = isEditing ? editItem.Title : "" };
 
-                Label lblContent = new Label { Text = "正文：", Location = new Point(16, 92), AutoSize = true };
+                Label lblContent = new Label { Text = isVideoMode ? "附带文字：" : "正文：", Location = new Point(16, 92), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
                 TextBox txtContent = new TextBox
                 {
-                    Location = new Point(85, 89),
-                    Width = 265,
+                    Location = new Point(108, 89),
+                    Width = 280,
                     Height = 95,
                     Multiline = true,
                     ScrollBars = ScrollBars.Vertical,
+                    BackColor = cardBg,
+                    ForeColor = txtCol,
                     Text = isEditing ? editItem.Content : ""
                 };
 
-                Label lblImg = new Label { Text = "图片：", Location = new Point(16, 198), AutoSize = true };
+                Label lblImg = new Label { Text = isVideoMode ? "视频文件：" : "图片：", Location = new Point(16, 198), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
                 
                 Panel pnlDropBox = new Panel
                 {
-                    Location = new Point(85, 195),
-                    Size = new Size(80, 80),
+                    Location = new Point(108, 195),
+                    Size = new Size(84, 84),
                     BorderStyle = BorderStyle.FixedSingle,
-                    BackColor = Color.FromArgb(246, 248, 252),
+                    BackColor = cardBg,
                     AllowDrop = true
                 };
 
@@ -2864,13 +3741,14 @@ namespace HuahuaHelper
                     Dock = DockStyle.Fill,
                     SizeMode = PictureBoxSizeMode.Zoom,
                     BackColor = Color.Transparent,
-                    AllowDrop = true
+                    AllowDrop = true,
+                    Visible = false
                 };
                 pnlDropBox.Controls.Add(picPreview);
 
                 Label lblDropHint = new Label
                 {
-                    Text = "直接将图片\n拖入此处",
+                    Text = isVideoMode ? "将视频文件\n拖入此处" : "直接将图片\n拖入此处",
                     Dock = DockStyle.Fill,
                     TextAlign = ContentAlignment.MiddleCenter,
                     Font = new Font("Microsoft YaHei UI", 8F),
@@ -2878,13 +3756,39 @@ namespace HuahuaHelper
                     Visible = true
                 };
                 pnlDropBox.Controls.Add(lblDropHint);
+                lblDropHint.BringToFront();
 
                 string currentSelectedImgPath = isEditing ? editItem.ImagePath : "";
+                string currentSelectedVideoPath = isEditing ? editItem.VideoPath : "";
                 Action updatePreview = () =>
                 {
+                    if (isVideoMode)
+                    {
+                        picPreview.Image = null;
+                        picPreview.Visible = false;
+                        lblDropHint.Visible = true;
+                        lblDropHint.BringToFront();
+                        if (!string.IsNullOrEmpty(currentSelectedVideoPath))
+                        {
+                            string fullV = ResolveMediaPath(currentSelectedVideoPath);
+                            if (SafeFileExists(fullV))
+                            {
+                                long lenKb = new FileInfo(fullV).Length / 1024;
+                                string sizeText = lenKb >= 1024 ? string.Format("{0:F1}MB", lenKb / 1024.0) : (lenKb + "KB");
+                                string extTag = SafeGetExtension(fullV).TrimStart('.').ToUpper();
+                                lblDropHint.Text = extTag + " 视频\n(" + sizeText + ")";
+                                lblDropHint.ForeColor = WarmTheme.Orange;
+                                return;
+                            }
+                        }
+                        lblDropHint.Text = "将视频文件\n拖入此处";
+                        lblDropHint.ForeColor = Color.FromArgb(140, 145, 155);
+                        return;
+                    }
+
                     if (!string.IsNullOrEmpty(currentSelectedImgPath))
                     {
-                        string fullP = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, currentSelectedImgPath);
+                        string fullP = ResolveMediaPath(currentSelectedImgPath);
                         if (File.Exists(fullP))
                         {
                             try
@@ -2893,6 +3797,8 @@ namespace HuahuaHelper
                                 {
                                     picPreview.Image = new Bitmap(temp);
                                 }
+                                picPreview.Visible = true;
+                                picPreview.BringToFront();
                                 lblDropHint.Visible = false;
                                 return;
                             }
@@ -2900,7 +3806,9 @@ namespace HuahuaHelper
                         }
                     }
                     picPreview.Image = null;
+                    picPreview.Visible = false;
                     lblDropHint.Visible = true;
+                    lblDropHint.BringToFront();
                 };
 
                 updatePreview();
@@ -2920,14 +3828,30 @@ namespace HuahuaHelper
                     {
                         string file = files[0];
                         string ext = Path.GetExtension(file).ToLower();
-                        if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp" || ext == ".webp")
+                        if (isVideoMode)
+                        {
+                            if (ext == ".mp4" || ext == ".mov" || ext == ".avi" || ext == ".mkv" || ext == ".wmv" || ext == ".flv" || ext == ".webm")
+                            {
+                                try
+                                {
+                                    currentSelectedVideoPath = ImportMediaFile(file, true);
+                                    updatePreview();
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show("导入视频失败: " + ex.Message, "提示");
+                                }
+                            }
+                            else
+                            {
+                                MessageBox.Show("请拖入视频文件（支持 mp4 / mov / avi / mkv / wmv / flv / webm）。", "提示");
+                            }
+                        }
+                        else if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp" || ext == ".webp")
                         {
                             try
                             {
-                                string newName = "images/" + Guid.NewGuid().ToString("N") + ext;
-                                string targetFull = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, newName);
-                                File.Copy(file, targetFull, true);
-                                currentSelectedImgPath = newName;
+                                currentSelectedImgPath = ImportMediaFile(file, false);
                                 updatePreview();
                             }
                             catch (Exception ex)
@@ -2944,67 +3868,86 @@ namespace HuahuaHelper
                 pnlDropBox.DragDrop += handleDragDrop;
                 picPreview.DragEnter += handleDragEnter;
                 picPreview.DragDrop += handleDragDrop;
+                lblDropHint.AllowDrop = true;
+                lblDropHint.DragEnter += handleDragEnter;
+                lblDropHint.DragDrop += handleDragDrop;
 
                 Button btnUploadImg = new Button
                 {
-                    Text = "本地选择",
-                    Location = new Point(175, 195),
+                    Text = isVideoMode ? "选择视频" : "本地选择",
+                    Location = new Point(202, 195),
                     Size = new Size(80, 28),
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = WarmTheme.LightCardBg,
-                    ForeColor = WarmTheme.LightTextPrimary
+                    BackColor = cardBg,
+                    ForeColor = txtCol
                 };
-                btnUploadImg.FlatAppearance.BorderColor = WarmTheme.LightBorder;
+                btnUploadImg.FlatAppearance.BorderColor = bdrCol;
 
                 Button btnPasteImg = new Button
                 {
                     Text = "  粘贴图片",
-                    Location = new Point(262, 195),
+                    Location = new Point(290, 195),
                     Size = new Size(92, 28),
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = WarmTheme.LightCardBg,
-                    ForeColor = WarmTheme.LightTextPrimary,
+                    BackColor = cardBg,
+                    ForeColor = txtCol,
                     TextAlign = ContentAlignment.MiddleRight,
-                    Padding = new Padding(0, 0, 6, 0)
+                    Padding = new Padding(0, 0, 6, 0),
+                    Visible = !isVideoMode
                 };
-                btnPasteImg.FlatAppearance.BorderColor = WarmTheme.LightBorder;
+                btnPasteImg.FlatAppearance.BorderColor = bdrCol;
                 btnPasteImg.Paint += (s, e) =>
                 {
-                    GlassRenderer.DrawVectorClipboardIcon(e.Graphics, new Rectangle(6, 6, 16, 16), WarmTheme.LightChipText);
+                    GlassRenderer.DrawVectorClipboardIcon(e.Graphics, new Rectangle(6, 6, 16, 16), secCol);
                 };
 
                 Button btnClearImg = new Button
                 {
-                    Text = "清除图片",
-                    Location = new Point(175, 230),
+                    Text = isVideoMode ? "清除视频" : "清除图片",
+                    Location = new Point(202, 232),
                     Size = new Size(80, 28),
                     FlatStyle = FlatStyle.Flat,
-                    BackColor = WarmTheme.LightCardBg,
+                    BackColor = cardBg,
                     ForeColor = WarmTheme.DangerRed
                 };
-                btnClearImg.FlatAppearance.BorderColor = WarmTheme.LightBorder;
+                btnClearImg.FlatAppearance.BorderColor = bdrCol;
 
                 btnUploadImg.Click += (s, e) =>
                 {
                     using (OpenFileDialog ofd = new OpenFileDialog())
                     {
-                        ofd.Title = "选择话术图片";
-                        ofd.Filter = "图片文件 (*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp)|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp";
-                        if (ofd.ShowDialog(dlg) == DialogResult.OK)
+                        if (isVideoMode)
                         {
-                            try
+                            ofd.Title = "选择视频文件";
+                            ofd.Filter = "视频文件 (*.mp4;*.mov;*.avi;*.mkv;*.wmv;*.flv;*.webm)|*.mp4;*.mov;*.avi;*.mkv;*.wmv;*.flv;*.webm|所有文件 (*.*)|*.*";
+                            if (ofd.ShowDialog(dlg) == DialogResult.OK)
                             {
-                                string ext = Path.GetExtension(ofd.FileName);
-                                string newName = "images/" + Guid.NewGuid().ToString("N") + ext;
-                                string targetFull = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, newName);
-                                File.Copy(ofd.FileName, targetFull, true);
-
-                                currentSelectedImgPath = newName;
-                                updatePreview();
+                                try
+                                {
+                                    currentSelectedVideoPath = ImportMediaFile(ofd.FileName, true);
+                                    updatePreview();
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show("加载视频失败: " + ex.Message, "提示");
+                                }
                             }
-                            catch (Exception ex)
+                        }
+                        else
+                        {
+                            ofd.Title = "选择话术图片";
+                            ofd.Filter = "图片文件 (*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp)|*.jpg;*.jpeg;*.png;*.gif;*.bmp;*.webp";
+                            if (ofd.ShowDialog(dlg) == DialogResult.OK)
                             {
-                                MessageBox.Show("加载图片失败: " + ex.Message, "提示");
+                                try
+                                {
+                                    currentSelectedImgPath = ImportMediaFile(ofd.FileName, false);
+                                    updatePreview();
+                                }
+                                catch (Exception ex)
+                                {
+                                    MessageBox.Show("加载图片失败: " + ex.Message, "提示");
+                                }
                             }
                         }
                     }
@@ -3023,6 +3966,7 @@ namespace HuahuaHelper
                                 Bitmap bmp = (Bitmap)iData.GetData(DataFormats.Bitmap);
                                 if (bmp != null)
                                 {
+                                    if (!Directory.Exists(_imagesDir)) Directory.CreateDirectory(_imagesDir);
                                     string newName = "images/" + Guid.NewGuid().ToString("N") + ".png";
                                     string targetFull = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, newName);
                                     bmp.Save(targetFull, System.Drawing.Imaging.ImageFormat.Png);
@@ -3041,11 +3985,7 @@ namespace HuahuaHelper
                                     string ext = Path.GetExtension(files[0]).ToLower();
                                     if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp" || ext == ".webp")
                                     {
-                                        string newName = "images/" + Guid.NewGuid().ToString("N") + ext;
-                                        string targetFull = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, newName);
-                                        File.Copy(files[0], targetFull, true);
-
-                                        currentSelectedImgPath = newName;
+                                        currentSelectedImgPath = ImportMediaFile(files[0], false);
                                         updatePreview();
                                         recognized = true;
                                     }
@@ -3057,6 +3997,7 @@ namespace HuahuaHelper
                                 Image img = Clipboard.GetImage();
                                 if (img != null)
                                 {
+                                    if (!Directory.Exists(_imagesDir)) Directory.CreateDirectory(_imagesDir);
                                     string newName = "images/" + Guid.NewGuid().ToString("N") + ".png";
                                     string targetFull = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, newName);
                                     img.Save(targetFull, System.Drawing.Imaging.ImageFormat.Png);
@@ -3078,16 +4019,17 @@ namespace HuahuaHelper
 
                 btnClearImg.Click += (s, e) =>
                 {
-                    currentSelectedImgPath = "";
+                    if (isVideoMode) currentSelectedVideoPath = "";
+                    else currentSelectedImgPath = "";
                     updatePreview();
                 };
 
                 Button btnSave = new Button
                 {
-                    Text = "保存话术",
-                    Location = new Point(185, 345),
-                    Size = new Size(80, 32),
-                    BackColor = _primaryOrange,
+                    Text = isVideoMode ? "保存视频" : "保存话术",
+                    Location = new Point(226, 345),
+                    Size = new Size(82, 32),
+                    BackColor = WarmTheme.Orange,
                     ForeColor = Color.White,
                     FlatStyle = FlatStyle.Flat,
                     DialogResult = DialogResult.OK
@@ -3097,9 +4039,31 @@ namespace HuahuaHelper
                 Button btnCancel = new Button
                 {
                     Text = "取消",
-                    Location = new Point(275, 345),
-                    Size = new Size(75, 32),
+                    Location = new Point(316, 345),
+                    Size = new Size(72, 32),
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = cardBg,
+                    ForeColor = txtCol,
                     DialogResult = DialogResult.Cancel
+                };
+                btnCancel.FlatAppearance.BorderColor = bdrCol;
+
+                dlg.Load += (s, e) =>
+                {
+                    int maxR = Math.Max(Math.Max(lblCat.Right, lblTitle.Right), Math.Max(lblContent.Right, lblImg.Right));
+                    int inputX = Math.Max(108, maxR + 8);
+                    int rightEdge = dlg.ClientSize.Width - 18;
+                    int fieldW = Math.Max(180, rightEdge - inputX);
+
+                    cmbCat.Left = inputX; cmbCat.Width = fieldW;
+                    txtTitle.Left = inputX; txtTitle.Width = fieldW;
+                    txtContent.Left = inputX; txtContent.Width = fieldW;
+                    pnlDropBox.Left = inputX;
+                    btnUploadImg.Left = pnlDropBox.Right + 10;
+                    btnPasteImg.Left = btnUploadImg.Right + 8;
+                    btnClearImg.Left = pnlDropBox.Right + 10;
+                    btnCancel.Left = rightEdge - btnCancel.Width;
+                    btnSave.Left = btnCancel.Left - btnSave.Width - 8;
                 };
 
                 if (isEditing)
@@ -3109,8 +4073,11 @@ namespace HuahuaHelper
                         Text = "删除",
                         Location = new Point(16, 345),
                         Size = new Size(60, 32),
-                        ForeColor = Color.Red
+                        FlatStyle = FlatStyle.Flat,
+                        BackColor = cardBg,
+                        ForeColor = WarmTheme.DangerRed
                     };
+                    btnDel.FlatAppearance.BorderColor = bdrCol;
                     btnDel.Click += (s, e) =>
                     {
                         if (MessageBox.Show("确定删除此话术？", "提示", MessageBoxButtons.YesNo) == DialogResult.Yes)
@@ -3135,10 +4102,18 @@ namespace HuahuaHelper
                 {
                     if (string.IsNullOrWhiteSpace(txtTitle.Text))
                     {
-                        MessageBox.Show("提示词不能为空！", "提示");
+                        MessageBox.Show(isVideoMode ? "视频名称不能为空！" : "提示词不能为空！", "提示");
                         return;
                     }
-                    if (string.IsNullOrWhiteSpace(txtContent.Text) && string.IsNullOrEmpty(currentSelectedImgPath))
+                    if (isVideoMode)
+                    {
+                        if (string.IsNullOrEmpty(currentSelectedVideoPath))
+                        {
+                            MessageBox.Show("请先选择或拖入一个视频文件！", "提示");
+                            return;
+                        }
+                    }
+                    else if (string.IsNullOrWhiteSpace(txtContent.Text) && string.IsNullOrEmpty(currentSelectedImgPath))
                     {
                         MessageBox.Show("话术正文和附带图片至少需要填写一项！", "提示");
                         return;
@@ -3151,11 +4126,19 @@ namespace HuahuaHelper
                         editItem.Category = selectedCategory;
                         editItem.Title = txtTitle.Text.Trim();
                         editItem.Content = txtContent.Text.Trim();
-                        editItem.ImagePath = currentSelectedImgPath;
+                        editItem.ImagePath = isVideoMode ? "" : currentSelectedImgPath;
+                        editItem.ItemType = isVideoMode ? "video" : "text";
+                        editItem.VideoPath = isVideoMode ? currentSelectedVideoPath : "";
                     }
                     else
                     {
-                        _data.Phrases.Insert(0, new PhraseItem(selectedCategory, txtTitle.Text.Trim(), txtContent.Text.Trim(), currentSelectedImgPath));
+                        _data.Phrases.Insert(0, new PhraseItem(
+                            selectedCategory,
+                            txtTitle.Text.Trim(),
+                            txtContent.Text.Trim(),
+                            isVideoMode ? "" : currentSelectedImgPath,
+                            isVideoMode ? "video" : "text",
+                            isVideoMode ? currentSelectedVideoPath : ""));
                     }
 
                     SaveData();
@@ -3170,6 +4153,12 @@ namespace HuahuaHelper
 
         private string PromptInput(string title, string promptText, string defaultValue)
         {
+            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+            Color dlgBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            Color cardBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
+            Color bdrCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+            Color txtCol = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+
             using (Form form = new Form())
             {
                 form.Text = title;
@@ -3178,12 +4167,16 @@ namespace HuahuaHelper
                 form.FormBorderStyle = FormBorderStyle.FixedDialog;
                 form.MaximizeBox = false;
                 form.MinimizeBox = false;
+                form.BackColor = dlgBg;
+                form.ForeColor = txtCol;
                 if (this.Icon != null) form.Icon = this.Icon;
 
-                Label label = new Label { Left = 20, Top = 16, Text = promptText, AutoSize = true };
-                TextBox textBox = new TextBox { Left = 20, Top = 40, Width = 260, Text = defaultValue };
-                Button btnOk = new Button { Text = "确定", Left = 130, Width = 70, Top = 72, DialogResult = DialogResult.OK, BackColor = _primaryOrange, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-                Button btnCancel = new Button { Text = "取消", Left = 210, Width = 70, Top = 72, DialogResult = DialogResult.Cancel };
+                Label label = new Label { Left = 20, Top = 16, Text = promptText, ForeColor = txtCol, AutoSize = true };
+                TextBox textBox = new TextBox { Left = 20, Top = 40, Width = 260, Text = defaultValue, BackColor = cardBg, ForeColor = txtCol };
+                Button btnOk = new Button { Text = "确定", Left = 130, Width = 70, Top = 72, DialogResult = DialogResult.OK, BackColor = WarmTheme.Orange, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
+                btnOk.FlatAppearance.BorderSize = 0;
+                Button btnCancel = new Button { Text = "取消", Left = 210, Width = 70, Top = 72, DialogResult = DialogResult.Cancel, BackColor = cardBg, ForeColor = txtCol, FlatStyle = FlatStyle.Flat };
+                btnCancel.FlatAppearance.BorderColor = bdrCol;
 
                 form.Controls.AddRange(new Control[] { label, textBox, btnOk, btnCancel });
                 form.AcceptButton = btnOk;
@@ -3201,10 +4194,12 @@ namespace HuahuaHelper
                 try
                 {
                     string json = File.ReadAllText(_storagePath, Encoding.UTF8);
-                    var data = JsonHelper.Deserialize(json);
+                    bool repairedPaths = false;
+                    var data = JsonHelper.Deserialize(json, out repairedPaths);
                     if (data != null)
                     {
                         _data = data;
+                        if (repairedPaths) SaveData();
                         return;
                     }
                 }
@@ -3213,6 +4208,7 @@ namespace HuahuaHelper
 
             _data.Settings = new AppSettings();
             _data.Categories = new List<string>();
+            _data.VideoCategories = new List<string>();
             _data.Phrases = new List<PhraseItem>();
 
             SaveData();
@@ -3242,6 +4238,7 @@ namespace HuahuaHelper
             sb.AppendFormat("    \"ThemeType\": \"{0}\",\n", Escape(data.Settings.ThemeType));
             sb.AppendFormat("    \"ColorScheme\": \"{0}\",\n", Escape(data.Settings.ColorScheme));
             sb.AppendFormat("    \"CustomBgPath\": \"{0}\",\n", Escape(data.Settings.CustomBgPath));
+            sb.AppendFormat("    \"CopyMediaToLocal\": {0},\n", data.Settings.CopyMediaToLocal ? "true" : "false");
             sb.AppendFormat("    \"WindowWidth\": {0},\n", data.Settings.WindowWidth);
             sb.AppendFormat("    \"WindowHeight\": {0},\n", data.Settings.WindowHeight);
             sb.AppendFormat("    \"WindowX\": {0},\n", data.Settings.WindowX);
@@ -3258,6 +4255,15 @@ namespace HuahuaHelper
             }
             sb.Append("],\n");
 
+            // VideoCategories
+            sb.Append("  \"VideoCategories\": [");
+            for (int i = 0; i < data.VideoCategories.Count; i++)
+            {
+                sb.AppendFormat("\"{0}\"", Escape(data.VideoCategories[i]));
+                if (i < data.VideoCategories.Count - 1) sb.Append(", ");
+            }
+            sb.Append("],\n");
+
             // Phrases
             sb.Append("  \"Phrases\": [\n");
             for (int i = 0; i < data.Phrases.Count; i++)
@@ -3268,7 +4274,9 @@ namespace HuahuaHelper
                 sb.AppendFormat("      \"Category\": \"{0}\",\n", Escape(p.Category));
                 sb.AppendFormat("      \"Title\": \"{0}\",\n", Escape(p.Title));
                 sb.AppendFormat("      \"Content\": \"{0}\",\n", Escape(p.Content));
-                sb.AppendFormat("      \"ImagePath\": \"{0}\"\n", Escape(p.ImagePath));
+                sb.AppendFormat("      \"ImagePath\": \"{0}\",\n", Escape(p.ImagePath));
+                sb.AppendFormat("      \"ItemType\": \"{0}\",\n", Escape(string.IsNullOrEmpty(p.ItemType) ? "text" : p.ItemType));
+                sb.AppendFormat("      \"VideoPath\": \"{0}\"\n", Escape(p.VideoPath));
                 sb.Append("    }");
                 if (i < data.Phrases.Count - 1) sb.Append(",");
                 sb.Append("\n");
@@ -3280,104 +4288,485 @@ namespace HuahuaHelper
 
         public static AppData Deserialize(string json)
         {
+            bool repaired = false;
+            return Deserialize(json, out repaired);
+        }
+
+        public static AppData Deserialize(string json, out bool repairedPaths)
+        {
+            repairedPaths = false;
+            if (string.IsNullOrWhiteSpace(json)) return null;
+
+            int pos = 0;
+            object rootObj = ParseValue(json, ref pos);
+            Dictionary<string, object> root = rootObj as Dictionary<string, object>;
+            if (root == null) return null;
+
             AppData appData = new AppData();
-            
-            string fLevelStr = ExtractValue(json, "FontSizeLevel");
-            int fLevel;
-            if (int.TryParse(fLevelStr, out fLevel)) appData.Settings.FontSizeLevel = fLevel;
 
-            string theme = ExtractValue(json, "ThemeType");
-            if (!string.IsNullOrEmpty(theme)) appData.Settings.ThemeType = theme;
-
-            string scheme = ExtractValue(json, "ColorScheme");
-            if (!string.IsNullOrEmpty(scheme)) appData.Settings.ColorScheme = scheme;
-
-            string customBg = ExtractValue(json, "CustomBgPath");
-            if (!string.IsNullOrEmpty(customBg)) appData.Settings.CustomBgPath = customBg;
-
-            string wStr = ExtractValue(json, "WindowWidth");
-            int wVal;
-            if (int.TryParse(wStr, out wVal)) appData.Settings.WindowWidth = wVal;
-
-            string hStr = ExtractValue(json, "WindowHeight");
-            int hVal;
-            if (int.TryParse(hStr, out hVal)) appData.Settings.WindowHeight = hVal;
-
-            string xStr = ExtractValue(json, "WindowX");
-            int xVal;
-            if (int.TryParse(xStr, out xVal)) appData.Settings.WindowX = xVal;
-
-            string yStr = ExtractValue(json, "WindowY");
-            int yVal;
-            if (int.TryParse(yStr, out yVal)) appData.Settings.WindowY = yVal;
-
-            string hasPosStr = ExtractValue(json, "HasWindowPos");
-            if (hasPosStr == "true") appData.Settings.HasWindowPos = true;
-
-            int catIdx = json.IndexOf("\"Categories\":");
-            if (catIdx != -1)
+            Dictionary<string, object> settingsObj = GetDict(root, "Settings");
+            if (settingsObj != null)
             {
-                int bStart = json.IndexOf("[", catIdx);
-                int bEnd = json.IndexOf("]", bStart);
-                if (bStart != -1 && bEnd != -1)
+                int iVal;
+                if (TryGetInt(settingsObj, "FontSizeLevel", out iVal)) appData.Settings.FontSizeLevel = iVal;
+
+                string theme = GetString(settingsObj, "ThemeType");
+                if (!string.IsNullOrEmpty(theme)) appData.Settings.ThemeType = theme;
+
+                string scheme = GetString(settingsObj, "ColorScheme");
+                if (!string.IsNullOrEmpty(scheme)) appData.Settings.ColorScheme = scheme;
+
+                string rawCustomBg = GetString(settingsObj, "CustomBgPath");
+                bool bgChanged;
+                string fixedCustomBg = RepairLegacyPath(rawCustomBg, out bgChanged);
+                if (bgChanged) repairedPaths = true;
+                if (!string.IsNullOrEmpty(fixedCustomBg)) appData.Settings.CustomBgPath = fixedCustomBg;
+
+                bool bVal;
+                if (TryGetBool(settingsObj, "CopyMediaToLocal", out bVal)) appData.Settings.CopyMediaToLocal = bVal;
+                if (TryGetInt(settingsObj, "WindowWidth", out iVal)) appData.Settings.WindowWidth = iVal;
+                if (TryGetInt(settingsObj, "WindowHeight", out iVal)) appData.Settings.WindowHeight = iVal;
+                if (TryGetInt(settingsObj, "WindowX", out iVal)) appData.Settings.WindowX = iVal;
+                if (TryGetInt(settingsObj, "WindowY", out iVal)) appData.Settings.WindowY = iVal;
+                if (TryGetBool(settingsObj, "HasWindowPos", out bVal)) appData.Settings.HasWindowPos = bVal;
+            }
+
+            ReadStringList(root, "Categories", appData.Categories);
+            ReadStringList(root, "VideoCategories", appData.VideoCategories);
+
+            List<object> phrasesArr = GetArray(root, "Phrases");
+            if (phrasesArr != null)
+            {
+                foreach (object entry in phrasesArr)
                 {
-                    string rawCats = json.Substring(bStart + 1, bEnd - bStart - 1);
-                    string[] tokens = rawCats.Split(',');
-                    foreach (var token in tokens)
+                    Dictionary<string, object> itemDict = entry as Dictionary<string, object>;
+                    if (itemDict == null) continue;
+
+                    string id = GetString(itemDict, "Id");
+                    string cat = GetString(itemDict, "Category");
+                    string title = GetString(itemDict, "Title");
+                    string content = GetString(itemDict, "Content");
+                    string rawImgPath = GetString(itemDict, "ImagePath");
+                    string itemType = GetString(itemDict, "ItemType");
+                    string rawVideoPath = GetString(itemDict, "VideoPath");
+
+                    bool imgChanged;
+                    string imgPath = RepairLegacyPath(rawImgPath, out imgChanged);
+                    if (imgChanged) repairedPaths = true;
+
+                    bool vidChanged;
+                    string videoPath = RepairLegacyPath(rawVideoPath, out vidChanged);
+                    if (vidChanged) repairedPaths = true;
+
+                    if (!string.IsNullOrEmpty(title))
                     {
-                        string clean = token.Trim().Trim('\"', ' ', '\r', '\n');
-                        if (!string.IsNullOrEmpty(clean)) appData.Categories.Add(Unescape(clean));
+                        PhraseItem item = new PhraseItem(cat, title, content, imgPath, itemType, videoPath);
+                        if (IsSafeIdentifier(id)) item.Id = id;
+                        appData.Phrases.Add(item);
                     }
                 }
             }
 
-            string[] items = json.Split(new string[] { "}," }, StringSplitOptions.None);
-            foreach (var itemStr in items)
-            {
-                string cat = ExtractValue(itemStr, "Category");
-                string title = ExtractValue(itemStr, "Title");
-                string content = ExtractValue(itemStr, "Content");
-                string imgPath = ExtractValue(itemStr, "ImagePath");
-
-                if (!string.IsNullOrEmpty(title))
-                {
-                    appData.Phrases.Add(new PhraseItem(cat, title, content, imgPath));
-                }
-            }
             return appData;
         }
 
-        private static string ExtractValue(string source, string key)
+        /// <summary>
+        /// 修复因旧版 Unescape 将 "\\n" / "\\r" 误替换为真实换行符而受损的文件路径
+        /// </summary>
+        public static string RepairLegacyPath(string rawPath)
         {
-            string pattern = "\"" + key + "\": ";
-            int idx = source.IndexOf(pattern);
-            if (idx == -1) return "";
-            int start = idx + pattern.Length;
-            if (start < source.Length && source[start] == '\"')
+            bool changed;
+            return RepairLegacyPath(rawPath, out changed);
+        }
+
+        public static string RepairLegacyPath(string rawPath, out bool changed)
+        {
+            changed = false;
+            if (string.IsNullOrEmpty(rawPath)) return "";
+
+            string trimmed = rawPath.Trim();
+            if (trimmed.Length >= 2 && trimmed[0] == '\"' && trimmed[trimmed.Length - 1] == '\"')
             {
-                start++;
-                int end = source.IndexOf("\"", start);
-                if (end == -1) return "";
-                return Unescape(source.Substring(start, end - start));
+                trimmed = trimmed.Substring(1, trimmed.Length - 2).Trim();
             }
-            else
+            if (trimmed != rawPath) changed = true;
+
+            if (trimmed.IndexOf('\n') == -1 && trimmed.IndexOf('\r') == -1 && !HasInvalidFileSystemChars(trimmed))
             {
-                int end = source.IndexOfAny(new char[] { ',', '\n', '\r', '}' }, start);
-                if (end == -1) end = source.Length;
-                return source.Substring(start, end - start).Trim();
+                return trimmed;
             }
+
+            changed = true;
+            // 构建主候选：把 "[1个以上反斜杠]+\n" 还原成 "\n"（盘符/普通路径分隔符）
+            string primaryCandidate = RebuildBrokenControlChars(trimmed, false);
+            if (SafeDiskFileExists(primaryCandidate)) return primaryCandidate;
+
+            // 如果是 UNC 开头被破坏（如 \\newserver -> \<LF>ewserver），尝试起始保留双反斜杠候选
+            string uncCandidate = RebuildBrokenControlChars(trimmed, true);
+            if (uncCandidate != primaryCandidate && SafeDiskFileExists(uncCandidate)) return uncCandidate;
+
+            return StripInvalidPathChars(primaryCandidate);
+        }
+
+        private static string RebuildBrokenControlChars(string input, bool doubleLeadingSlash)
+        {
+            StringBuilder sb = new StringBuilder(input.Length);
+            int i = 0;
+            while (i < input.Length)
+            {
+                char ch = input[i];
+                if (ch == '\\')
+                {
+                    int slashStart = i;
+                    while (i < input.Length && input[i] == '\\') i++;
+                    int slashCount = i - slashStart;
+
+                    if (i < input.Length && (input[i] == '\n' || input[i] == '\r'))
+                    {
+                        char mapped = (input[i] == '\n') ? 'n' : 'r';
+                        if (doubleLeadingSlash && slashStart == 0)
+                            sb.Append("\\\\");
+                        else
+                            sb.Append('\\');
+                        sb.Append(mapped);
+                        i++;
+                        continue;
+                    }
+
+                    for (int k = 0; k < slashCount; k++) sb.Append('\\');
+                    continue;
+                }
+
+                if (ch == '\n')
+                {
+                    sb.Append("\\n");
+                    i++;
+                    continue;
+                }
+                if (ch == '\r')
+                {
+                    sb.Append("\\r");
+                    i++;
+                    continue;
+                }
+
+                sb.Append(ch);
+                i++;
+            }
+            return StripInvalidPathChars(sb.ToString());
+        }
+
+        private static string StripInvalidPathChars(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return "";
+            char[] invalid = Path.GetInvalidPathChars();
+            StringBuilder sb = new StringBuilder(path.Length);
+            for (int i = 0; i < path.Length; i++)
+            {
+                char c = path[i];
+                if (c < ' ') continue;
+                if (c == '\"') continue;
+                if (Array.IndexOf(invalid, c) >= 0) continue;
+                sb.Append(c);
+            }
+            return sb.ToString().Trim();
+        }
+
+        private static bool HasInvalidFileSystemChars(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return false;
+            char[] invalid = Path.GetInvalidPathChars();
+            for (int i = 0; i < path.Length; i++)
+            {
+                char c = path[i];
+                if (c < ' ') return true;
+                if (c == '\"') return true;
+                if (Array.IndexOf(invalid, c) >= 0) return true;
+            }
+            return false;
+        }
+
+        private static bool SafeDiskFileExists(string path)
+        {
+            if (string.IsNullOrEmpty(path) || HasInvalidFileSystemChars(path)) return false;
+            try
+            {
+                string full = Path.IsPathRooted(path)
+                    ? path
+                    : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, path);
+                return File.Exists(full);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool IsSafeIdentifier(string id)
+        {
+            if (string.IsNullOrEmpty(id)) return false;
+            for (int i = 0; i < id.Length; i++)
+            {
+                char c = id[i];
+                bool ok = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+                          (c >= '0' && c <= '9') || c == '-' || c == '_';
+                if (!ok) return false;
+            }
+            return true;
+        }
+
+        private static Dictionary<string, object> GetDict(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            if (obj != null && obj.TryGetValue(key, out v)) return v as Dictionary<string, object>;
+            return null;
+        }
+
+        private static List<object> GetArray(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            if (obj != null && obj.TryGetValue(key, out v)) return v as List<object>;
+            return null;
+        }
+
+        private static string GetString(Dictionary<string, object> obj, string key)
+        {
+            object v;
+            if (obj == null || !obj.TryGetValue(key, out v) || v == null) return "";
+            return v as string ?? v.ToString();
+        }
+
+        private static bool TryGetInt(Dictionary<string, object> obj, string key, out int result)
+        {
+            result = 0;
+            object v;
+            if (obj == null || !obj.TryGetValue(key, out v) || v == null) return false;
+            if (v is int) { result = (int)v; return true; }
+            if (v is long) { result = (int)(long)v; return true; }
+            if (v is double) { result = (int)(double)v; return true; }
+            return int.TryParse(v.ToString(), out result);
+        }
+
+        private static bool TryGetBool(Dictionary<string, object> obj, string key, out bool result)
+        {
+            result = false;
+            object v;
+            if (obj == null || !obj.TryGetValue(key, out v) || v == null) return false;
+            if (v is bool) { result = (bool)v; return true; }
+            string s = v.ToString().Trim().ToLower();
+            if (s == "true") { result = true; return true; }
+            if (s == "false") { result = false; return true; }
+            return false;
+        }
+
+        private static void ReadStringList(Dictionary<string, object> obj, string key, List<string> target)
+        {
+            List<object> arr = GetArray(obj, key);
+            if (arr == null) return;
+            foreach (object item in arr)
+            {
+                if (item == null) continue;
+                string s = item as string ?? item.ToString();
+                if (!string.IsNullOrEmpty(s)) target.Add(s);
+            }
+        }
+
+        private static void SkipWhitespace(string s, ref int pos)
+        {
+            while (pos < s.Length)
+            {
+                char c = s[pos];
+                if (c == ' ' || c == '\t' || c == '\r' || c == '\n' || c == '\uFEFF')
+                    pos++;
+                else
+                    break;
+            }
+        }
+
+        private static object ParseValue(string s, ref int pos)
+        {
+            SkipWhitespace(s, ref pos);
+            if (pos >= s.Length) return null;
+
+            char c = s[pos];
+            if (c == '{') return ParseObject(s, ref pos);
+            if (c == '[') return ParseArray(s, ref pos);
+            if (c == '\"') return ParseString(s, ref pos);
+            if (c == 't' && pos + 4 <= s.Length && s.Substring(pos, 4) == "true")
+            {
+                pos += 4;
+                return true;
+            }
+            if (c == 'f' && pos + 5 <= s.Length && s.Substring(pos, 5) == "false")
+            {
+                pos += 5;
+                return false;
+            }
+            if (c == 'n' && pos + 4 <= s.Length && s.Substring(pos, 4) == "null")
+            {
+                pos += 4;
+                return null;
+            }
+            if (c == '-' || (c >= '0' && c <= '9')) return ParseNumber(s, ref pos);
+
+            // 容错跳过未识别字符
+            pos++;
+            return null;
+        }
+
+        private static Dictionary<string, object> ParseObject(string s, ref int pos)
+        {
+            var dict = new Dictionary<string, object>(StringComparer.Ordinal);
+            pos++; // skip '{'
+            while (pos < s.Length)
+            {
+                SkipWhitespace(s, ref pos);
+                if (pos >= s.Length) break;
+                if (s[pos] == '}') { pos++; break; }
+                if (s[pos] == ',') { pos++; continue; }
+
+                if (s[pos] != '\"')
+                {
+                    pos++;
+                    continue;
+                }
+
+                string key = ParseString(s, ref pos);
+                SkipWhitespace(s, ref pos);
+                if (pos < s.Length && s[pos] == ':') pos++;
+                object val = ParseValue(s, ref pos);
+                dict[key] = val;
+
+                SkipWhitespace(s, ref pos);
+                if (pos < s.Length && s[pos] == ',') pos++;
+            }
+            return dict;
+        }
+
+        private static List<object> ParseArray(string s, ref int pos)
+        {
+            var list = new List<object>();
+            pos++; // skip '['
+            while (pos < s.Length)
+            {
+                SkipWhitespace(s, ref pos);
+                if (pos >= s.Length) break;
+                if (s[pos] == ']') { pos++; break; }
+                if (s[pos] == ',') { pos++; continue; }
+
+                object val = ParseValue(s, ref pos);
+                list.Add(val);
+
+                SkipWhitespace(s, ref pos);
+                if (pos < s.Length && s[pos] == ',') pos++;
+            }
+            return list;
+        }
+
+        private static string ParseString(string s, ref int pos)
+        {
+            pos++; // skip opening '"'
+            StringBuilder sb = new StringBuilder();
+            while (pos < s.Length)
+            {
+                char c = s[pos++];
+                if (c == '\"') return sb.ToString();
+                if (c == '\\')
+                {
+                    if (pos >= s.Length) break;
+                    char esc = s[pos++];
+                    switch (esc)
+                    {
+                        case '\"': sb.Append('\"'); break;
+                        case '\\': sb.Append('\\'); break;
+                        case '/': sb.Append('/'); break;
+                        case 'b': sb.Append('\b'); break;
+                        case 'f': sb.Append('\f'); break;
+                        case 'n': sb.Append('\n'); break;
+                        case 'r': sb.Append('\r'); break;
+                        case 't': sb.Append('\t'); break;
+                        case 'u':
+                            if (pos + 4 <= s.Length)
+                            {
+                                string hex = s.Substring(pos, 4);
+                                int code;
+                                if (int.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out code))
+                                {
+                                    sb.Append((char)code);
+                                    pos += 4;
+                                }
+                                else
+                                {
+                                    sb.Append("\\u");
+                                }
+                            }
+                            else
+                            {
+                                sb.Append("\\u");
+                            }
+                            break;
+                        default:
+                            // 容错保留未知转义，避免解析中断
+                            sb.Append('\\');
+                            sb.Append(esc);
+                            break;
+                    }
+                }
+                else
+                {
+                    sb.Append(c);
+                }
+            }
+            return sb.ToString();
+        }
+
+        private static object ParseNumber(string s, ref int pos)
+        {
+            int start = pos;
+            if (s[pos] == '-') pos++;
+            while (pos < s.Length)
+            {
+                char c = s[pos];
+                if ((c >= '0' && c <= '9') || c == '.' || c == 'e' || c == 'E' || c == '+' || c == '-')
+                    pos++;
+                else
+                    break;
+            }
+            string numStr = s.Substring(start, pos - start);
+            long lVal;
+            if (long.TryParse(numStr, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out lVal))
+                return lVal;
+            double dVal;
+            if (double.TryParse(numStr, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out dVal))
+                return dVal;
+            return numStr;
         }
 
         private static string Escape(string s)
         {
-            if (s == null) return "";
-            return s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\r", "\\r").Replace("\n", "\\n");
-        }
-
-        private static string Unescape(string s)
-        {
-            if (s == null) return "";
-            return s.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\\"", "\"").Replace("\\\\", "\\");
+            if (string.IsNullOrEmpty(s)) return "";
+            StringBuilder sb = new StringBuilder(s.Length + 8);
+            for (int i = 0; i < s.Length; i++)
+            {
+                char c = s[i];
+                switch (c)
+                {
+                    case '\\': sb.Append("\\\\"); break;
+                    case '\"': sb.Append("\\\""); break;
+                    case '\b': sb.Append("\\b"); break;
+                    case '\f': sb.Append("\\f"); break;
+                    case '\n': sb.Append("\\n"); break;
+                    case '\r': sb.Append("\\r"); break;
+                    case '\t': sb.Append("\\t"); break;
+                    default:
+                        if (c < ' ')
+                            sb.AppendFormat("\\u{0:X4}", (int)c);
+                        else
+                            sb.Append(c);
+                        break;
+                }
+            }
+            return sb.ToString();
         }
     }
 
