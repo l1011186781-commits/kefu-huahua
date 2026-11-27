@@ -15,13 +15,13 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("客服花花")]
-[assembly: AssemblyDescription("千牛工作台快捷回复辅助工具")]
+[assembly: AssemblyDescription("千牛工作台快捷回复辅助工具 - macOS × iOS 融合桌面版")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("HuahuaHelper")]
 [assembly: AssemblyProduct("客服花花")]
 [assembly: AssemblyCopyright("Copyright (C) 2026 HuahuaHelper")]
-[assembly: AssemblyVersion("1.3.0.0")]
-[assembly: AssemblyFileVersion("1.3.0.0")]
+[assembly: AssemblyVersion("1.4.0.0")]
+[assembly: AssemblyFileVersion("1.4.0.0")]
 
 namespace HuahuaHelper
 {
@@ -100,7 +100,7 @@ namespace HuahuaHelper
     }
 
     /// <summary>
-    /// 主题色板定义（支持 主题一「暖橙纸感」 与 主题二「樱粉花语」）
+    /// 桌面级 Design Tokens 与双主题色板定义（浅色 / 深色分级表面、发丝边框、交互状态）
     /// </summary>
     public class ThemePalette
     {
@@ -109,9 +109,12 @@ namespace HuahuaHelper
         public Color PrimaryHover;
         public Color PrimaryPressed;
         public Color DangerRed;
+        public Color SwitchOnGreen;
         public Color FocusRing;
 
+        // 浅色表面层级与文字
         public Color LightPaperBg;
+        public Color LightSidebarBg;
         public Color LightCardBg;
         public Color LightTextPrimary;
         public Color LightTextSecondary;
@@ -124,8 +127,12 @@ namespace HuahuaHelper
         public Color LightSearchBg;
         public Color LightScrollThumb;
 
+        // 深色表面层级与文字
         public Color DarkPaperBg;
+        public Color DarkSidebarBg;
         public Color DarkCardBg;
+        public Color DarkSecondaryBtnBg;
+        public Color DarkElevatedBg;
         public Color DarkTextPrimary;
         public Color DarkTextSecondary;
         public Color DarkTextMuted;
@@ -138,72 +145,163 @@ namespace HuahuaHelper
 
     public static class WarmTheme
     {
+        // 核心尺寸与圆角 Tokens
+        public const int RadiusControl = 7;        // 常规按钮/输入框圆角 (6px-8px)
+        public const int RadiusDialogBtn = 9;      // 弹窗主确认按钮圆角 (8px-10px)
+        public const int RadiusCard = 11;          // 内容卡片圆角 (10px-12px)
+        public const int BtnHeightToolbar = 28;    // 工具栏/次按钮高度 (28px-32px)
+        public const int BtnHeightDialog = 34;     // 弹窗主按钮高度 (32px-36px)
+
+        // 发丝分割线 & 半透明交互色 Tokens
+        public static readonly Color HairlineLight = Color.FromArgb(20, 0, 0, 0);          // rgba(0,0,0,0.08)
+        public static readonly Color HairlineDark = Color.FromArgb(26, 255, 255, 255);     // rgba(255,255,255,0.10)
+        public static readonly Color BorderSecondaryLight = Color.FromArgb(26, 0, 0, 0);   // rgba(0,0,0,0.10)
+        public static readonly Color TopHighlightDark = Color.FromArgb(30, 255, 255, 255); // rgba(255,255,255,0.12)
+        public static readonly Color TopHighlightPrimary = Color.FromArgb(52, 255, 255, 255); // inset 0 1px 0 rgba(255,255,255,0.2)
+        public static readonly Color GhostHoverLight = Color.FromArgb(15, 0, 0, 0);        // rgba(0,0,0,0.06)
+        public static readonly Color GhostHoverDark = Color.FromArgb(20, 255, 255, 255);   // rgba(255,255,255,0.08)
+        public static readonly Color SegmentedTrackLight = Color.FromArgb(14, 0, 0, 0);    // 凹槽底
+        public static readonly Color SegmentedTrackDark = Color.FromArgb(18, 255, 255, 255);
+        public static readonly Color DestructiveRed = Color.FromArgb(255, 59, 48);         // #FF3B30
+        public static readonly Color SwitchGreen = Color.FromArgb(52, 199, 89);            // #34C759
+
+        private static string _cachedFontFamily = null;
+        public static string UiFontFamily
+        {
+            get
+            {
+                if (_cachedFontFamily != null) return _cachedFontFamily;
+                string[] preferred = new string[] { "Segoe UI Variable Text", "Segoe UI", "Microsoft YaHei UI" };
+                using (InstalledFontCollection ifc = new InstalledFontCollection())
+                {
+                    foreach (string name in preferred)
+                    {
+                        for (int i = 0; i < ifc.Families.Length; i++)
+                        {
+                            if (string.Equals(ifc.Families[i].Name, name, StringComparison.OrdinalIgnoreCase))
+                            {
+                                _cachedFontFamily = name;
+                                return _cachedFontFamily;
+                            }
+                        }
+                    }
+                }
+                _cachedFontFamily = "Microsoft YaHei UI";
+                return _cachedFontFamily;
+            }
+        }
+
+        public static Font CreateFont(float sizePt, FontStyle style = FontStyle.Regular)
+        {
+            return new Font(UiFontFamily, sizePt, style, GraphicsUnit.Point);
+        }
+
+        public static Color BlendColor(Color from, Color to, float progress)
+        {
+            if (progress <= 0f) return from;
+            if (progress >= 1f) return to;
+            int a = (int)Math.Round(from.A + (to.A - from.A) * progress);
+            int r = (int)Math.Round(from.R + (to.R - from.R) * progress);
+            int g = (int)Math.Round(from.G + (to.G - from.G) * progress);
+            int b = (int)Math.Round(from.B + (to.B - from.B) * progress);
+            return Color.FromArgb(
+                Math.Max(0, Math.Min(255, a)),
+                Math.Max(0, Math.Min(255, r)),
+                Math.Max(0, Math.Min(255, g)),
+                Math.Max(0, Math.Min(255, b)));
+        }
+
+        public static Color Darken(Color c, float amount)
+        {
+            return Color.FromArgb(
+                c.A,
+                Math.Max(0, (int)Math.Round(c.R * (1f - amount))),
+                Math.Max(0, (int)Math.Round(c.G * (1f - amount))),
+                Math.Max(0, (int)Math.Round(c.B * (1f - amount))));
+        }
+
+        public static Color ApplyAlpha(Color c, float opacity)
+        {
+            int a = Math.Max(0, Math.Min(255, (int)Math.Round(c.A * opacity)));
+            return Color.FromArgb(a, c.R, c.G, c.B);
+        }
+
         public static readonly ThemePalette OrangePalette = new ThemePalette
         {
             IsPink = false,
-            Primary = Color.FromArgb(255, 80, 0),            // #FF5000
-            PrimaryHover = Color.FromArgb(255, 106, 31),     // #FF6A1F
-            PrimaryPressed = Color.FromArgb(230, 72, 0),     // #E64800
-            DangerRed = Color.FromArgb(220, 38, 38),         // #DC2626
-            FocusRing = Color.FromArgb(255, 178, 135),       // #FFB287
+            Primary = Color.FromArgb(255, 80, 0),              // 品牌活力橙 #FF5000
+            PrimaryHover = Color.FromArgb(255, 102, 26),       // #FF661A
+            PrimaryPressed = Color.FromArgb(224, 68, 0),       // #E04400
+            DangerRed = Color.FromArgb(255, 59, 48),           // #FF3B30
+            SwitchOnGreen = Color.FromArgb(52, 199, 89),       // #34C759
+            FocusRing = Color.FromArgb(90, 255, 80, 0),        // 0 0 0 3px rgba(accent, 0.35)
 
-            LightPaperBg = Color.FromArgb(250, 247, 242),    // #FAF7F2
-            LightCardBg = Color.FromArgb(255, 255, 255),     // #FFFFFF
-            LightTextPrimary = Color.FromArgb(41, 37, 36),   // #292524
-            LightTextSecondary = Color.FromArgb(120, 113, 108), // #78716C
-            LightTextMuted = Color.FromArgb(168, 162, 158),  // #A8A29E
-            LightChipText = Color.FromArgb(87, 83, 78),      // #57534E
-            LightDivider = Color.FromArgb(234, 227, 216),    // #EAE3D8
-            LightBorder = Color.FromArgb(231, 224, 214),     // #E7E0D6
-            LightRowHover = Color.FromArgb(255, 241, 232),   // #FFF1E8
-            LightRowSelected = Color.FromArgb(255, 231, 216),
-            LightSearchBg = Color.FromArgb(245, 241, 234),   // #F5F1EA
-            LightScrollThumb = Color.FromArgb(214, 208, 198),// #D6D0C6
+            LightPaperBg = Color.FromArgb(251, 250, 248),      // 温润质感白 #FBFAF8
+            LightSidebarBg = Color.FromArgb(245, 245, 247),    // macOS 侧边栏灰 #F5F5F7
+            LightCardBg = Color.FromArgb(255, 255, 255),       // 纯白表面 #FFFFFF
+            LightTextPrimary = Color.FromArgb(29, 29, 31),     // Apple 炭墨 #1D1D1F
+            LightTextSecondary = Color.FromArgb(110, 110, 115),// #6E6E73
+            LightTextMuted = Color.FromArgb(142, 142, 147),    // #8E8E93
+            LightChipText = Color.FromArgb(66, 66, 69),        // #424245
+            LightDivider = Color.FromArgb(232, 229, 224),
+            LightBorder = Color.FromArgb(226, 222, 216),
+            LightRowHover = Color.FromArgb(255, 243, 236),     // 浅橙微晕
+            LightRowSelected = Color.FromArgb(255, 234, 222),
+            LightSearchBg = Color.FromArgb(242, 240, 237),     // 凹槽搜索底
+            LightScrollThumb = Color.FromArgb(145, 0, 0, 0),
 
-            DarkPaperBg = Color.FromArgb(28, 25, 23),        // #1C1917
-            DarkCardBg = Color.FromArgb(41, 37, 36),         // #292524
-            DarkTextPrimary = Color.FromArgb(245, 240, 234), // #F5F0EA
-            DarkTextSecondary = Color.FromArgb(168, 162, 158), // #A8A29E
-            DarkTextMuted = Color.FromArgb(120, 113, 108),   // #78716C
-            DarkDivider = Color.FromArgb(68, 64, 60),        // #44403C
-            DarkPrimaryAccent = Color.FromArgb(255, 106, 31),// #FF6A1F
-            DarkRowHover = Color.FromArgb(59, 36, 26),       // #3B241A
-            DarkRowSelected = Color.FromArgb(74, 43, 30),
-            DarkScrollThumb = Color.FromArgb(87, 83, 78)     // #57534E
+            DarkPaperBg = Color.FromArgb(24, 24, 26),          // 深邃暗黑底 #18181A
+            DarkSidebarBg = Color.FromArgb(30, 30, 30),        // macOS 暗黑侧栏 #1E1E1E
+            DarkCardBg = Color.FromArgb(36, 36, 39),           // #242427
+            DarkSecondaryBtnBg = Color.FromArgb(44, 44, 46),   // Apple #2C2C2E
+            DarkElevatedBg = Color.FromArgb(54, 54, 58),       // 浮层提升表面 #36363A
+            DarkTextPrimary = Color.FromArgb(245, 245, 247),   // #F5F5F7
+            DarkTextSecondary = Color.FromArgb(174, 174, 178), // #AEAEB2
+            DarkTextMuted = Color.FromArgb(142, 142, 147),     // #8E8E93
+            DarkDivider = Color.FromArgb(56, 56, 58),          // #38383A
+            DarkPrimaryAccent = Color.FromArgb(255, 102, 26),
+            DarkRowHover = Color.FromArgb(48, 36, 30),
+            DarkRowSelected = Color.FromArgb(64, 44, 34),
+            DarkScrollThumb = Color.FromArgb(140, 255, 255, 255)
         };
 
         public static readonly ThemePalette PinkPalette = new ThemePalette
         {
             IsPink = true,
-            Primary = Color.FromArgb(250, 114, 152),         // #FA7298
-            PrimaryHover = Color.FromArgb(251, 140, 169),    // #FB8CA9
-            PrimaryPressed = Color.FromArgb(232, 93, 126),   // #E85D7E
-            DangerRed = Color.FromArgb(220, 38, 38),         // #DC2626
-            FocusRing = Color.FromArgb(253, 185, 200),       // #FDB9C8
+            Primary = Color.FromArgb(250, 114, 152),           // 樱粉强调色 #FA7298
+            PrimaryHover = Color.FromArgb(252, 134, 166),      // #FC86A6
+            PrimaryPressed = Color.FromArgb(228, 90, 128),     // #E45A80
+            DangerRed = Color.FromArgb(255, 59, 48),           // #FF3B30
+            SwitchOnGreen = Color.FromArgb(52, 199, 89),       // #34C759
+            FocusRing = Color.FromArgb(90, 250, 114, 152),     // 0 0 0 3px rgba(pink, 0.35)
 
-            LightPaperBg = Color.FromArgb(253, 248, 249),    // #FDF8F9
-            LightCardBg = Color.FromArgb(255, 255, 255),     // #FFFFFF
-            LightTextPrimary = Color.FromArgb(51, 46, 47),   // #332E2F
-            LightTextSecondary = Color.FromArgb(151, 138, 142), // #978A8E
-            LightTextMuted = Color.FromArgb(196, 184, 187),  // #C4B8BB
-            LightChipText = Color.FromArgb(87, 83, 78),      // #57534E
-            LightDivider = Color.FromArgb(243, 226, 230),    // #F3E2E6
-            LightBorder = Color.FromArgb(237, 217, 222),     // #EDD9DE
-            LightRowHover = Color.FromArgb(253, 238, 242),   // #FDEEF2
-            LightRowSelected = Color.FromArgb(251, 224, 232),
-            LightSearchBg = Color.FromArgb(249, 239, 241),   // #F9EFF1
-            LightScrollThumb = Color.FromArgb(227, 203, 210),// #E3CBD2
+            LightPaperBg = Color.FromArgb(253, 249, 250),      // 樱粉纸白 #FDF9FA
+            LightSidebarBg = Color.FromArgb(245, 243, 245),    // 微粉柔灰
+            LightCardBg = Color.FromArgb(255, 255, 255),
+            LightTextPrimary = Color.FromArgb(34, 30, 32),
+            LightTextSecondary = Color.FromArgb(128, 118, 122),
+            LightTextMuted = Color.FromArgb(158, 148, 152),
+            LightChipText = Color.FromArgb(72, 66, 68),
+            LightDivider = Color.FromArgb(240, 228, 232),
+            LightBorder = Color.FromArgb(234, 218, 224),
+            LightRowHover = Color.FromArgb(253, 239, 244),
+            LightRowSelected = Color.FromArgb(251, 226, 234),
+            LightSearchBg = Color.FromArgb(246, 240, 242),
+            LightScrollThumb = Color.FromArgb(145, 0, 0, 0),
 
-            DarkPaperBg = Color.FromArgb(34, 26, 30),        // #221A1E
-            DarkCardBg = Color.FromArgb(46, 36, 41),         // #2E2429
-            DarkTextPrimary = Color.FromArgb(253, 242, 245), // #FDF2F5
-            DarkTextSecondary = Color.FromArgb(184, 166, 171), // #B8A6AB
-            DarkTextMuted = Color.FromArgb(138, 118, 124),   // #8A767C
-            DarkDivider = Color.FromArgb(74, 54, 62),        // #4A363E
-            DarkPrimaryAccent = Color.FromArgb(251, 140, 169), // #FB8CA9
-            DarkRowHover = Color.FromArgb(61, 37, 48),       // #3D2530
-            DarkRowSelected = Color.FromArgb(78, 45, 60),
-            DarkScrollThumb = Color.FromArgb(90, 66, 75)     // #5A424B
+            DarkPaperBg = Color.FromArgb(28, 23, 26),          // 夜樱深梅 #1C171A
+            DarkSidebarBg = Color.FromArgb(32, 26, 29),        // 深梅侧边栏
+            DarkCardBg = Color.FromArgb(40, 33, 37),
+            DarkSecondaryBtnBg = Color.FromArgb(48, 42, 46),
+            DarkElevatedBg = Color.FromArgb(60, 50, 56),
+            DarkTextPrimary = Color.FromArgb(252, 242, 246),
+            DarkTextSecondary = Color.FromArgb(184, 166, 174),
+            DarkTextMuted = Color.FromArgb(142, 126, 134),
+            DarkDivider = Color.FromArgb(64, 52, 58),
+            DarkPrimaryAccent = Color.FromArgb(252, 134, 166),
+            DarkRowHover = Color.FromArgb(56, 38, 47),
+            DarkRowSelected = Color.FromArgb(72, 45, 58),
+            DarkScrollThumb = Color.FromArgb(140, 255, 255, 255)
         };
 
         public static ThemePalette Current = OrangePalette;
@@ -221,6 +319,7 @@ namespace HuahuaHelper
         public static Color FocusRing { get { return Current.FocusRing; } }
 
         public static Color LightPaperBg { get { return Current.LightPaperBg; } }
+        public static Color LightSidebarBg { get { return Current.LightSidebarBg; } }
         public static Color LightCardBg { get { return Current.LightCardBg; } }
         public static Color LightTextPrimary { get { return Current.LightTextPrimary; } }
         public static Color LightTextSecondary { get { return Current.LightTextSecondary; } }
@@ -234,7 +333,10 @@ namespace HuahuaHelper
         public static Color LightScrollThumb { get { return Current.LightScrollThumb; } }
 
         public static Color DarkPaperBg { get { return Current.DarkPaperBg; } }
+        public static Color DarkSidebarBg { get { return Current.DarkSidebarBg; } }
         public static Color DarkCardBg { get { return Current.DarkCardBg; } }
+        public static Color DarkSecondaryBtnBg { get { return Current.DarkSecondaryBtnBg; } }
+        public static Color DarkElevatedBg { get { return Current.DarkElevatedBg; } }
         public static Color DarkTextPrimary { get { return Current.DarkTextPrimary; } }
         public static Color DarkTextSecondary { get { return Current.DarkTextSecondary; } }
         public static Color DarkTextMuted { get { return Current.DarkTextMuted; } }
@@ -243,6 +345,81 @@ namespace HuahuaHelper
         public static Color DarkRowHover { get { return Current.DarkRowHover; } }
         public static Color DarkRowSelected { get { return Current.DarkRowSelected; } }
         public static Color DarkScrollThumb { get { return Current.DarkScrollThumb; } }
+    }
+
+    /// <summary>
+    /// Apple 桌面交互曲线与轻量补间计算（cubic-bezier(0.2, 0.8, 0.2, 1)）
+    /// </summary>
+    public static class MotionHelper
+    {
+        public static float EaseApple(float t)
+        {
+            if (t <= 0f) return 0f;
+            if (t >= 1f) return 1f;
+            // 对 cubic-bezier(0.2, 0.8, 0.2, 1) 执行快速牛顿迭代求解 x(u)=t -> y(u)
+            double u = t;
+            for (int i = 0; i < 4; i++)
+            {
+                double x = 3.0 * u * (1.0 - u) * (1.0 - u) * 0.2 + 3.0 * u * u * (1.0 - u) * 0.2 + u * u * u - t;
+                double dx = 3.0 * (1.0 - u) * (1.0 - u) * 0.2 + 6.0 * (1.0 - u) * u * (0.2 - 0.2) + 3.0 * u * u * (1.0 - 0.2);
+                if (Math.Abs(dx) < 1e-5) break;
+                u -= x / dx;
+                if (u < 0.0) u = 0.0;
+                if (u > 1.0) u = 1.0;
+            }
+            double y = 3.0 * u * (1.0 - u) * (1.0 - u) * 0.8 + 3.0 * u * u * (1.0 - u) * 1.0 + u * u * u;
+            return (float)Math.Max(0.0, Math.Min(1.0, y));
+        }
+    }
+
+    /// <summary>
+    /// Windows 10/11 DWM 原生圆角、阴影及深浅模式修饰工具
+    /// </summary>
+    public static class Win32WindowStyler
+    {
+        [StructLayout(LayoutKind.Sequential)]
+        private struct MARGINS
+        {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS pMarInset);
+
+        private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+        private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+        private const int DWMWA_BORDER_COLOR = 34;
+        private const int DWMWCP_ROUND = 2;
+
+        public static void ApplyModernWindowStyle(Form form, bool isDark)
+        {
+            if (form == null || !form.IsHandleCreated) return;
+            try
+            {
+                int darkVal = isDark ? 1 : 0;
+                DwmSetWindowAttribute(form.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkVal, sizeof(int));
+
+                // 启用 Windows 11 原生 8px 系统窗口圆角
+                int cornerVal = DWMWCP_ROUND;
+                DwmSetWindowAttribute(form.Handle, DWMWA_WINDOW_CORNER_PREFERENCE, ref cornerVal, sizeof(int));
+
+                // 设置 1px 细腻发丝外框色（Win11）
+                Color bdr = isDark ? Color.FromArgb(62, 62, 66) : Color.FromArgb(215, 212, 206);
+                int colorRef = bdr.R | (bdr.G << 8) | (bdr.B << 16);
+                DwmSetWindowAttribute(form.Handle, DWMWA_BORDER_COLOR, ref colorRef, sizeof(int));
+
+                // 触发 DWM 非客户区柔和立体投影
+                MARGINS m = new MARGINS { cxLeftWidth = 1, cxRightWidth = 1, cyTopHeight = 1, cyBottomHeight = 1 };
+                DwmExtendFrameIntoClientArea(form.Handle, ref m);
+            }
+            catch { }
+        }
     }
 
     /// <summary>
@@ -288,7 +465,18 @@ namespace HuahuaHelper
     }
 
     /// <summary>
-    /// iOS 26 Liquid Glass GDI+ 渲染引擎（无第三方依赖）
+    /// macOS 标志性按钮层级规范（Primary / Secondary / Ghost / Destructive）
+    /// </summary>
+    public enum ButtonVariant
+    {
+        Primary,
+        Secondary,
+        Ghost,
+        Destructive
+    }
+
+    /// <summary>
+    /// Apple Desktop HIG + GDI+ 现代矢量与质感渲染引擎（无第三方依赖）
     /// </summary>
     public static class GlassRenderer
     {
@@ -319,7 +507,7 @@ namespace HuahuaHelper
         }
 
         /// <summary>
-        /// 顶栏 / 玻璃卡片面板绘制：分层半透明色块模拟背景模糊 + 顶部高光 + 内折射
+        /// 顶栏面板绘制：通透底色 + 顶部 1px 细腻内高光
         /// </summary>
         public static void DrawLiquidGlassPanel(Graphics g, Rectangle rect, bool isDark, int radius = 0)
         {
@@ -329,7 +517,6 @@ namespace HuahuaHelper
 
             using (GraphicsPath path = CreateRoundedPath(rect, radius))
             {
-                // 分层半透明色块模拟毛玻璃模糊散射
                 using (Brush b1 = new SolidBrush(p.BlurLayer1)) g.FillPath(b1, path);
                 Rectangle innerBlur = new Rectangle(rect.X + 1, rect.Y + 1, Math.Max(1, rect.Width - 2), Math.Max(1, rect.Height - 2));
                 using (GraphicsPath innerPath = CreateRoundedPath(innerBlur, Math.Max(0, radius - 1)))
@@ -339,8 +526,8 @@ namespace HuahuaHelper
                 }
                 using (Brush bGlass = new SolidBrush(p.GlassFill)) g.FillPath(bGlass, path);
 
-                // 顶部 1px 高光描边
-                using (Pen topPen = new Pen(p.TopHighlight, 1))
+                // 顶部 1px 细腻高光描边
+                using (Pen topPen = new Pen(isDark ? WarmTheme.TopHighlightDark : p.TopHighlight, 1))
                 {
                     g.DrawLine(topPen, rect.X + radius, rect.Y, rect.Right - radius, rect.Y);
                 }
@@ -348,100 +535,162 @@ namespace HuahuaHelper
         }
 
         /// <summary>
-        /// iOS 26 Liquid Glass 按钮完整实现（半透明玻璃 / 主色液态玻璃、内侧折射、顶部 1px 高光、内外阴影）
+        /// 通用 macOS × iOS 现代按钮表面绘制（支持 4 层级、120ms 悬停渐变、顶部内高光、3px 键盘焦点环、按压下沉与禁用 0.4 透明度）
         /// </summary>
-        public static void DrawLiquidGlassButton(Graphics g, Rectangle rect, Color accentColor, bool isPrimary, bool isDark, bool isHover, bool isPressed = false, int radius = 6)
+        public static void DrawModernButtonSurface(
+            Graphics g,
+            Rectangle bounds,
+            ButtonVariant variant,
+            Color accentColor,
+            bool isDark,
+            float hoverProgress,
+            bool isPressed,
+            bool showFocusRing,
+            bool isEnabled,
+            int radius,
+            Color? customHoverBg = null)
         {
-            if (rect.Width <= 2 || rect.Height <= 2) return;
+            if (bounds.Width <= 4 || bounds.Height <= 4) return;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            LiquidGlassParams p = isDark ? LiquidGlassParams.Dark : LiquidGlassParams.Light;
+            float opacity = isEnabled ? 1.0f : 0.4f;
+            float hp = isEnabled ? Math.Max(0f, Math.Min(1f, hoverProgress)) : 0f;
 
-            // 1. 外层柔和投影（两层扩散，模拟悬浮感）
-            if (!isPressed)
+            // 按压态克制微下沉（模拟桌面端 transform: scale(0.98) 实体按压手感）
+            Rectangle drawRect = isPressed && isEnabled
+                ? new Rectangle(bounds.X + 1, bounds.Y + 1, bounds.Width - 2, bounds.Height - 2)
+                : bounds;
+
+            // 1. Focus-Visible 外发光焦点环（仅键盘 Tab 导航时显示 0 0 0 3px rgba(accent, 0.35)）
+            if (showFocusRing && isEnabled)
             {
-                Rectangle s2 = new Rectangle(rect.X, rect.Y + 2, rect.Width, rect.Height);
-                Rectangle s1 = new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height);
-                using (GraphicsPath p2 = CreateRoundedPath(s2, radius))
-                using (Brush b2 = new SolidBrush(Color.FromArgb(p.OuterShadow.A / 2, p.OuterShadow)))
-                    g.FillPath(b2, p2);
-                using (GraphicsPath p1 = CreateRoundedPath(s1, radius))
-                using (Brush b1 = new SolidBrush(p.OuterShadow))
-                    g.FillPath(b1, p1);
+                Color ringCol = variant == ButtonVariant.Destructive
+                    ? WarmTheme.ApplyAlpha(WarmTheme.DestructiveRed, 0.35f)
+                    : WarmTheme.ApplyAlpha(accentColor, 0.35f);
+                Rectangle ringRect = new Rectangle(drawRect.X - 2, drawRect.Y - 2, drawRect.Width + 4, drawRect.Height + 4);
+                using (GraphicsPath fPath = CreateRoundedPath(ringRect, radius + 2))
+                using (Pen fPen = new Pen(ringCol, 2.5f))
+                {
+                    g.DrawPath(fPen, fPath);
+                }
             }
 
-            using (GraphicsPath path = CreateRoundedPath(rect, radius))
+            // 2. 极轻外层投影（仅 Primary 与 Secondary 在未按下态保留）
+            if (!isPressed && isEnabled && (variant == ButtonVariant.Primary || variant == ButtonVariant.Secondary))
             {
-                // 2. 分层半透明底色（模拟背景模糊）
-                if (isPrimary)
+                int shadowAlpha = variant == ButtonVariant.Primary ? 34 : (isDark ? 24 : 14);
+                Rectangle shRect = new Rectangle(drawRect.X, drawRect.Y + 1, drawRect.Width, drawRect.Height);
+                using (GraphicsPath sPath = CreateRoundedPath(shRect, radius))
+                using (Brush sBrush = new SolidBrush(Color.FromArgb(shadowAlpha, 0, 0, 0)))
                 {
-                    int baseAlpha = isPressed ? 245 : (isHover ? 235 : 215);
-                    using (Brush baseBrush = new SolidBrush(Color.FromArgb(baseAlpha, accentColor)))
-                        g.FillPath(baseBrush, path);
-
-                    // 叠加白色玻璃半透层 (12%~28%) 产生通透液态感
-                    Color overlayCol = isHover ? p.GlassHoverFill : p.GlassFill;
-                    using (Brush glassOverlay = new SolidBrush(Color.FromArgb(isPressed ? 24 : overlayCol.A, 255, 255, 255)))
-                        g.FillPath(glassOverlay, path);
+                    g.FillPath(sBrush, sPath);
                 }
-                else
-                {
-                    using (Brush b1 = new SolidBrush(p.BlurLayer1)) g.FillPath(b1, path);
-                    using (Brush b2 = new SolidBrush(p.BlurLayer2)) g.FillPath(b2, path);
-                    Color glassFill = isPressed ? p.BlurLayer2 : (isHover ? p.GlassHoverFill : p.GlassFill);
-                    using (Brush bGlass = new SolidBrush(glassFill)) g.FillPath(bGlass, path);
-                }
+            }
 
-                // 3. 边缘内侧加亮模拟折射（内缩 1px 描边）
-                Rectangle refractRect = new Rectangle(rect.X + 1, rect.Y + 1, rect.Width - 2, rect.Height - 2);
-                if (refractRect.Width > 2 && refractRect.Height > 2)
+            using (GraphicsPath path = CreateRoundedPath(drawRect, radius))
+            {
+                if (variant == ButtonVariant.Primary)
                 {
-                    using (GraphicsPath rPath = CreateRoundedPath(refractRect, Math.Max(1, radius - 1)))
-                    using (Pen refractPen = new Pen(isPrimary ? Color.FromArgb(115, 255, 255, 255) : p.InnerRefract, 1))
+                    // Primary：强调色填充 + 顶部 1px 内高光 (inset 0 1px 0 rgba(255,255,255,0.2))
+                    Color baseCol = accentColor;
+                    Color hoverCol = WarmTheme.BlendColor(accentColor, Color.White, isDark ? 0.14f : 0.10f);
+                    Color fill = isPressed ? WarmTheme.Darken(accentColor, 0.10f) : WarmTheme.BlendColor(baseCol, hoverCol, hp);
+                    fill = WarmTheme.ApplyAlpha(fill, opacity);
+
+                    using (Brush b = new SolidBrush(fill)) g.FillPath(b, path);
+
+                    // 顶部 1px 内高光弧线
+                    g.SetClip(path);
+                    using (Pen hi = new Pen(WarmTheme.ApplyAlpha(WarmTheme.TopHighlightPrimary, opacity), 1))
                     {
-                        g.DrawPath(refractPen, rPath);
+                        g.DrawLine(hi, drawRect.X + 2, drawRect.Y + 1, drawRect.Right - 2, drawRect.Y + 1);
+                    }
+                    g.ResetClip();
+
+                    Color bdr = WarmTheme.ApplyAlpha(WarmTheme.Darken(accentColor, 0.14f), opacity * 0.65f);
+                    using (Pen pen = new Pen(bdr, 1)) g.DrawPath(pen, path);
+                }
+                else if (variant == ButtonVariant.Secondary)
+                {
+                    // Secondary：浅色纯白 + 1px rgba(0,0,0,0.10) 描边；暗黑 #2C2C2E + 顶部 rgba(255,255,255,0.12) 微亮高光
+                    Color normalBg = isDark ? WarmTheme.DarkSecondaryBtnBg : WarmTheme.LightCardBg;
+                    Color hoverBg = isDark ? Color.FromArgb(58, 58, 62) : Color.FromArgb(248, 248, 250);
+                    Color pressBg = isDark ? Color.FromArgb(40, 40, 42) : Color.FromArgb(240, 240, 243);
+                    Color fill = isPressed ? pressBg : WarmTheme.BlendColor(normalBg, hoverBg, hp);
+                    fill = WarmTheme.ApplyAlpha(fill, opacity);
+
+                    using (Brush b = new SolidBrush(fill)) g.FillPath(b, path);
+
+                    if (isDark)
+                    {
+                        g.SetClip(path);
+                        using (Pen hi = new Pen(WarmTheme.ApplyAlpha(WarmTheme.TopHighlightDark, opacity), 1))
+                        {
+                            g.DrawLine(hi, drawRect.X + 2, drawRect.Y + 1, drawRect.Right - 2, drawRect.Y + 1);
+                        }
+                        g.ResetClip();
+                    }
+
+                    Color bdrCol = isDark ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight;
+                    using (Pen pen = new Pen(WarmTheme.ApplyAlpha(bdrCol, opacity), 1))
+                    {
+                        g.DrawPath(pen, path);
                     }
                 }
-
-                // 4. 顶部 1px 高光描边 + 底部内阴影
-                g.SetClip(path);
-                using (Pen topPen = new Pen(p.TopHighlight, 1))
+                else if (variant == ButtonVariant.Ghost)
                 {
-                    g.DrawLine(topPen, rect.X + 2, rect.Y + 1, rect.Right - 2, rect.Y + 1);
+                    // Ghost：默认透明无底，悬停浮现圆角半透明底色 rgba(0,0,0,0.06) / 暗黑 rgba(255,255,255,0.08)
+                    Color hoverBg = customHoverBg.HasValue
+                        ? customHoverBg.Value
+                        : (isDark ? WarmTheme.GhostHoverDark : WarmTheme.GhostHoverLight);
+                    Color pressBg = isDark ? Color.FromArgb(34, 255, 255, 255) : Color.FromArgb(26, 0, 0, 0);
+                    Color fill = isPressed ? pressBg : WarmTheme.BlendColor(Color.FromArgb(0, hoverBg), hoverBg, hp);
+                    fill = WarmTheme.ApplyAlpha(fill, opacity);
+                    if (fill.A > 0)
+                    {
+                        using (Brush b = new SolidBrush(fill)) g.FillPath(b, path);
+                    }
                 }
-                using (Pen innerShadowPen = new Pen(p.InnerShadow, 1))
+                else // Destructive
                 {
-                    g.DrawLine(innerShadowPen, rect.X + 2, rect.Bottom - 2, rect.Right - 2, rect.Bottom - 2);
-                }
-                g.ResetClip();
+                    // Destructive：警示红 #FF3B30，悬停时浅红底色着色（支持定制关闭/删除态）
+                    Color hoverBg = customHoverBg.HasValue
+                        ? customHoverBg.Value
+                        : Color.FromArgb(isDark ? 48 : 26, WarmTheme.DestructiveRed);
+                    Color pressBg = Color.FromArgb(isDark ? 72 : 42, WarmTheme.DestructiveRed);
+                    Color normalBg = isDark ? WarmTheme.DarkSecondaryBtnBg : WarmTheme.LightCardBg;
+                    Color fill = isPressed ? pressBg : WarmTheme.BlendColor(normalBg, hoverBg, hp);
+                    fill = WarmTheme.ApplyAlpha(fill, opacity);
 
-                // 5. 外轮廓细边框
-                Color outerCol = isPrimary ? Color.FromArgb(180, accentColor) : p.OuterBorder;
-                using (Pen outerPen = new Pen(outerCol, 1))
-                {
-                    g.DrawPath(outerPen, path);
+                    using (Brush b = new SolidBrush(fill)) g.FillPath(b, path);
+
+                    Color normalBdr = isDark ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight;
+                    Color hoverBdr = Color.FromArgb(isDark ? 110 : 85, WarmTheme.DestructiveRed);
+                    Color bdrCol = WarmTheme.ApplyAlpha(WarmTheme.BlendColor(normalBdr, hoverBdr, hp), opacity);
+                    using (Pen pen = new Pen(bdrCol, 1)) g.DrawPath(pen, path);
                 }
             }
         }
 
         /// <summary>
-        /// 扁平实色按钮绘制（保留给次按钮/分类胶囊使用）
+        /// 兼容行内主按钮 / 液态玻璃快捷绘制
         /// </summary>
-        public static void DrawLiquidGlassButton(Graphics g, Rectangle rect, Color fillNormal, Color fillHover, Color borderCol, bool isHover, int radius = 6, bool isPressed = false, Color? fillPressed = null)
+        public static void DrawLiquidGlassButton(Graphics g, Rectangle rect, Color accentColor, bool isPrimary, bool isDark, bool isHover, bool isPressed = false, int radius = 7)
+        {
+            DrawModernButtonSurface(
+                g, rect,
+                isPrimary ? ButtonVariant.Primary : ButtonVariant.Secondary,
+                accentColor, isDark, isHover ? 1.0f : 0.0f, isPressed, false, true, radius);
+        }
+
+        /// <summary>
+        /// 扁平实色/次级胶囊绘制（供分类芯片等使用）
+        /// </summary>
+        public static void DrawLiquidGlassButton(Graphics g, Rectangle rect, Color fillNormal, Color fillHover, Color borderCol, bool isHover, int radius = 7, bool isPressed = false, Color? fillPressed = null)
         {
             if (rect.Width <= 0 || rect.Height <= 0) return;
-
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            // 1. 克制投影
-            Rectangle shadowRect = new Rectangle(rect.X, rect.Y + 1, rect.Width, rect.Height);
-            using (GraphicsPath sPath = CreateRoundedPath(shadowRect, radius))
-            using (Brush sBrush = new SolidBrush(Color.FromArgb(20, 0, 0, 0)))
-            {
-                g.FillPath(sBrush, sPath);
-            }
-
-            // 2. 实色填充
             Color bg = fillNormal;
             if (isPressed && fillPressed.HasValue) bg = fillPressed.Value;
             else if (isHover) bg = fillHover;
@@ -450,26 +699,18 @@ namespace HuahuaHelper
             {
                 if (bg.A > 0)
                 {
-                    using (Brush b = new SolidBrush(bg))
-                    {
-                        g.FillPath(b, path);
-                    }
+                    using (Brush b = new SolidBrush(bg)) g.FillPath(b, path);
                 }
-
-                // 3. 1px 边框
                 if (borderCol.A > 0)
                 {
-                    using (Pen pen = new Pen(borderCol, 1))
-                    {
-                        g.DrawPath(pen, path);
-                    }
+                    using (Pen pen = new Pen(borderCol, 1)) g.DrawPath(pen, path);
                 }
             }
         }
 
-        private static Pen CreateIconPen(Color color)
+        private static Pen CreateIconPen(Color color, float width = 1.6f)
         {
-            Pen p = new Pen(color, 1.5f);
+            Pen p = new Pen(color, width);
             p.StartCap = LineCap.Round;
             p.EndCap = LineCap.Round;
             p.LineJoin = LineJoin.Round;
@@ -477,48 +718,29 @@ namespace HuahuaHelper
         }
 
         /// <summary>
-        /// 16x16 矢量齿轮图标
+        /// 16x16 线性齿轮图标（SF Symbols 风格：1.6px 统一线宽）
         /// </summary>
         public static void DrawVectorGearIcon(Graphics g, Rectangle rect, Color gearColor)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
-
             float cx = rect.X + rect.Width / 2f;
             float cy = rect.Y + rect.Height / 2f;
-            float outerR = Math.Min(rect.Width, rect.Height) * 0.36f;
-            float innerR = outerR * 0.72f;
-            float holeR = outerR * 0.34f;
+            float rOuter = 6.2f;
+            float rInner = 4.6f;
+            float rHole = 2.2f;
 
-            using (GraphicsPath gearPath = new GraphicsPath())
+            using (Pen p = CreateIconPen(gearColor, 1.55f))
             {
-                int teeth = 6;
-                double step = Math.PI * 2 / teeth;
-                double toothHalf = step * 0.22;
-
-                List<PointF> pts = new List<PointF>();
-                for (int i = 0; i < teeth; i++)
+                g.DrawEllipse(p, cx - rHole, cy - rHole, rHole * 2, rHole * 2);
+                g.DrawEllipse(p, cx - rInner, cy - rInner, rInner * 2, rInner * 2);
+                for (int i = 0; i < 8; i++)
                 {
-                    double angle = i * step;
-
-                    double a1 = angle - toothHalf * 1.5;
-                    pts.Add(new PointF(cx + (float)(Math.Cos(a1) * innerR), cy + (float)(Math.Sin(a1) * innerR)));
-
-                    double a2 = angle - toothHalf * 0.7;
-                    pts.Add(new PointF(cx + (float)(Math.Cos(a2) * outerR), cy + (float)(Math.Sin(a2) * outerR)));
-
-                    double a3 = angle + toothHalf * 0.7;
-                    pts.Add(new PointF(cx + (float)(Math.Cos(a3) * outerR), cy + (float)(Math.Sin(a3) * outerR)));
-
-                    double a4 = angle + toothHalf * 1.5;
-                    pts.Add(new PointF(cx + (float)(Math.Cos(a4) * innerR), cy + (float)(Math.Sin(a4) * innerR)));
-                }
-
-                gearPath.AddPolygon(pts.ToArray());
-                gearPath.AddEllipse(cx - holeR, cy - holeR, holeR * 2, holeR * 2);
-
-                using (Brush b = new SolidBrush(gearColor))
-                {
-                    g.FillPath(b, gearPath);
+                    double ang = i * (Math.PI / 4.0);
+                    float x1 = cx + (float)(Math.Cos(ang) * (rInner - 0.1f));
+                    float y1 = cy + (float)(Math.Sin(ang) * (rInner - 0.1f));
+                    float x2 = cx + (float)(Math.Cos(ang) * rOuter);
+                    float y2 = cy + (float)(Math.Sin(ang) * rOuter);
+                    g.DrawLine(p, x1, y1, x2, y2);
                 }
             }
         }
@@ -699,59 +921,231 @@ namespace HuahuaHelper
                 });
             }
         }
+
+        /// <summary>
+        /// 14x14 细线侧边栏折叠切换图标
+        /// </summary>
+        public static void DrawVectorSidebarIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float x = rect.X + (rect.Width - 13f) / 2f;
+            float y = rect.Y + (rect.Height - 11f) / 2f;
+            using (Pen p = CreateIconPen(color, 1.5f))
+            {
+                Rectangle r = Rectangle.Round(new RectangleF(x, y, 13f, 11f));
+                using (GraphicsPath path = CreateRoundedPath(r, 2)) g.DrawPath(p, path);
+                g.DrawLine(p, x + 4.5f, y + 0.5f, x + 4.5f, y + 10.5f);
+            }
+        }
+
+        /// <summary>
+        /// 14x14 细线图钉图标（置顶状态）
+        /// </summary>
+        public static void DrawVectorPinIcon(Graphics g, Rectangle rect, Color color, bool active)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color, 1.55f))
+            {
+                // 斜45度图钉头与底座
+                PointF[] head = new PointF[]
+                {
+                    new PointF(cx - 2.2f, cy - 4.2f),
+                    new PointF(cx + 3.8f, cy - 4.2f),
+                    new PointF(cx + 2.8f, cy - 1.5f),
+                    new PointF(cx + 4.5f, cy + 0.8f),
+                    new PointF(cx - 3.0f, cy + 0.8f),
+                    new PointF(cx - 1.3f, cy - 1.5f)
+                };
+                if (active)
+                {
+                    using (Brush b = new SolidBrush(color)) g.FillPolygon(b, head);
+                }
+                else
+                {
+                    g.DrawPolygon(p, head);
+                }
+                g.DrawLine(p, cx + 0.8f, cy + 0.8f, cx + 0.8f, cy + 5.2f);
+            }
+        }
+
+        /// <summary>
+        /// 14x14 下拉小箭头图标
+        /// </summary>
+        public static void DrawVectorChevronDownIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color, 1.6f))
+            {
+                g.DrawLines(p, new PointF[]
+                {
+                    new PointF(cx - 3.5f, cy - 1.5f),
+                    new PointF(cx, cy + 2.0f),
+                    new PointF(cx + 3.5f, cy - 1.5f)
+                });
+            }
+        }
+
+        /// <summary>
+        /// 14x14 垃圾桶删除图标
+        /// </summary>
+        public static void DrawVectorTrashIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color, 1.5f))
+            {
+                g.DrawLine(p, cx - 5f, cy - 3.2f, cx + 5f, cy - 3.2f);
+                g.DrawLine(p, cx - 2f, cy - 5.2f, cx + 2f, cy - 5.2f);
+                g.DrawLines(p, new PointF[]
+                {
+                    new PointF(cx - 3.8f, cy - 3.2f),
+                    new PointF(cx - 3.2f, cy + 5.0f),
+                    new PointF(cx + 3.2f, cy + 5.0f),
+                    new PointF(cx + 3.8f, cy - 3.2f)
+                });
+            }
+        }
+
+        /// <summary>
+        /// Windows 右上角窗口控制三键（最小化 / 最大化 / 还原 / 关闭）
+        /// </summary>
+        public static void DrawVectorWinMinimizeIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color, 1.5f))
+            {
+                g.DrawLine(p, cx - 4.5f, cy, cx + 4.5f, cy);
+            }
+        }
+
+        public static void DrawVectorWinMaximizeIcon(Graphics g, Rectangle rect, Color color, bool isMaximized)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color, 1.45f))
+            {
+                if (isMaximized)
+                {
+                    g.DrawRectangle(p, cx - 4.5f, cy - 2.2f, 6.8f, 6.8f);
+                    g.DrawLines(p, new PointF[]
+                    {
+                        new PointF(cx - 2.2f, cy - 2.2f),
+                        new PointF(cx - 2.2f, cy - 4.4f),
+                        new PointF(cx + 4.5f, cy - 4.4f),
+                        new PointF(cx + 4.5f, cy + 2.3f),
+                        new PointF(cx + 2.3f, cy + 2.3f)
+                    });
+                }
+                else
+                {
+                    g.DrawRectangle(p, cx - 4.2f, cy - 4.2f, 8.4f, 8.4f);
+                }
+            }
+        }
+
+        public static void DrawVectorWinCloseIcon(Graphics g, Rectangle rect, Color color)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float cx = rect.X + rect.Width / 2f;
+            float cy = rect.Y + rect.Height / 2f;
+            using (Pen p = CreateIconPen(color, 1.55f))
+            {
+                g.DrawLine(p, cx - 4f, cy - 4f, cx + 4f, cy + 4f);
+                g.DrawLine(p, cx + 4f, cy - 4f, cx - 4f, cy + 4f);
+            }
+        }
+
+        /// <summary>
+        /// 紧凑型 14px 加载旋转指示器
+        /// </summary>
+        public static void DrawVectorSpinner(Graphics g, Rectangle rect, Color color, float startAngle)
+        {
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            float size = 13f;
+            float x = rect.X + (rect.Width - size) / 2f;
+            float y = rect.Y + (rect.Height - size) / 2f;
+            using (Pen trackPen = new Pen(WarmTheme.ApplyAlpha(color, 0.25f), 1.8f))
+            {
+                g.DrawEllipse(trackPen, x, y, size, size);
+            }
+            using (Pen arcPen = CreateIconPen(color, 1.8f))
+            {
+                g.DrawArc(arcPen, x, y, size, size, startAngle, 110f);
+            }
+        }
     }
 
     /// <summary>
-    /// 文本 / 视频 模式切换栏（位于分类栏上方）
+    /// 文本 / 视频 模式切换栏（内嵌 Apple 分段控制器 SegmentedControl + 右侧计数）
     /// </summary>
     public class ModeSwitchBar : Control
     {
-        public string ActiveMode { get; set; } // "text" or "video"
-        public int ItemCount { get; set; }
-        public bool IsDarkTheme { get; set; }
-        public event Action<string> OnModeChanged;
+        private SegmentedControl _seg;
+        private int _itemCount = 0;
+        private bool _isDark = false;
 
-        private int _hoverTab = -1; // 0: text, 1: video
+        public string ActiveMode
+        {
+            get { return _seg != null && _seg.SelectedIndex == 1 ? "video" : "text"; }
+            set
+            {
+                if (_seg != null) _seg.SelectedIndex = (value == "video") ? 1 : 0;
+                this.Invalidate();
+            }
+        }
+
+        public int ItemCount
+        {
+            get { return _itemCount; }
+            set { _itemCount = value; this.Invalidate(); }
+        }
+
+        public bool IsDarkTheme
+        {
+            get { return _isDark; }
+            set
+            {
+                _isDark = value;
+                if (_seg != null) { _seg.IsDarkTheme = value; _seg.Invalidate(); }
+                this.Invalidate();
+            }
+        }
+
+        public event Action<string> OnModeChanged;
 
         public ModeSwitchBar()
         {
-            ActiveMode = "text";
-            ItemCount = 0;
-            IsDarkTheme = false;
-            this.Height = 34;
-            this.Cursor = Cursors.Hand;
+            this.Height = 36;
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.OptimizedDoubleBuffer |
                           ControlStyles.UserPaint |
                           ControlStyles.ResizeRedraw, true);
 
-            this.MouseMove += (s, e) =>
+            _seg = new SegmentedControl
             {
-                int prev = _hoverTab;
-                Rectangle rText = new Rectangle(12, 4, 64, 25);
-                Rectangle rVideo = new Rectangle(82, 4, 64, 25);
-                if (rText.Contains(e.Location)) _hoverTab = 0;
-                else if (rVideo.Contains(e.Location)) _hoverTab = 1;
-                else _hoverTab = -1;
-                if (prev != _hoverTab) this.Invalidate();
-            };
-            this.MouseLeave += (s, e) => { _hoverTab = -1; this.Invalidate(); };
-            this.MouseDown += (s, e) =>
-            {
-                if (e.Button != MouseButtons.Left) return;
-                if (_hoverTab == 0 && ActiveMode != "text")
+                Location = new Point(10, 4),
+                Size = new Size(146, 28),
+                Items = new string[] { "文本", "视频" },
+                IconPainters = new Action<Graphics, Rectangle, Color>[]
                 {
-                    ActiveMode = "text";
-                    this.Invalidate();
-                    if (OnModeChanged != null) OnModeChanged("text");
-                }
-                else if (_hoverTab == 1 && ActiveMode != "video")
-                {
-                    ActiveMode = "video";
-                    this.Invalidate();
-                    if (OnModeChanged != null) OnModeChanged("video");
+                    GlassRenderer.DrawVectorDocIcon,
+                    GlassRenderer.DrawVectorVideoIcon
                 }
             };
+            _seg.SelectedIndexChanged += (s, e) =>
+            {
+                string m = (_seg.SelectedIndex == 1) ? "video" : "text";
+                if (OnModeChanged != null) OnModeChanged(m);
+            };
+            this.Controls.Add(_seg);
         }
 
         protected override void OnPaint(PaintEventArgs e)
@@ -759,10 +1153,9 @@ namespace HuahuaHelper
             base.OnPaint(e);
             Graphics g = e.Graphics;
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-            g.SmoothingMode = SmoothingMode.AntiAlias;
 
             Color barBg = IsDarkTheme ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
-            Color lineCol = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+            Color lineCol = IsDarkTheme ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
             g.Clear(barBg);
 
             using (Pen linePen = new Pen(lineCol, 1))
@@ -770,58 +1163,19 @@ namespace HuahuaHelper
                 g.DrawLine(linePen, 0, this.Height - 1, this.Width, this.Height - 1);
             }
 
-            Rectangle rText = new Rectangle(12, 4, 64, 25);
-            Rectangle rVideo = new Rectangle(82, 4, 64, 25);
-
-            bool textActive = (ActiveMode != "video");
-            bool videoActive = (ActiveMode == "video");
-
-            using (Font fReg = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Regular))
-            using (Font fBold = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold))
-            using (Font fCount = new Font("Microsoft YaHei UI", 8F, FontStyle.Regular))
+            Color cntCol = IsDarkTheme ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
+            using (Font fCount = WarmTheme.CreateFont(8.5F, FontStyle.Regular))
             {
-                // 文本按钮
-                DrawTab(g, rText, "文本", textActive, _hoverTab == 0, true, fReg, fBold);
-                // 视频按钮
-                DrawTab(g, rVideo, "视频", videoActive, _hoverTab == 1, false, fReg, fBold);
-
-                // 右侧数量统计
-                Color cntCol = IsDarkTheme ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
-                Rectangle rCount = new Rectangle(152, 4, Math.Max(40, this.ClientSize.Width - 164), 25);
-                TextRenderer.DrawText(g, string.Format("共 {0} 条", ItemCount), fCount, rCount, cntCol,
-                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
+                int left = _seg.Right + 8;
+                Rectangle rCount = new Rectangle(left, 4, Math.Max(40, this.ClientSize.Width - left - 12), 28);
+                TextRenderer.DrawText(g, string.Format("共 {0} 条", _itemCount), fCount, rCount, cntCol,
+                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
             }
-        }
-
-        private void DrawTab(Graphics g, Rectangle rect, string label, bool isActive, bool isHover, bool isDoc, Font fReg, Font fBold)
-        {
-            Color txtCol;
-            if (isActive)
-            {
-                GlassRenderer.DrawLiquidGlassButton(g, rect, WarmTheme.Orange, true, IsDarkTheme, isHover, false, 12);
-                txtCol = Color.White;
-            }
-            else
-            {
-                Color bgNormal = IsDarkTheme ? Color.Transparent : WarmTheme.LightSearchBg;
-                Color bgHover = IsDarkTheme ? WarmTheme.DarkRowHover : WarmTheme.LightRowHover;
-                Color bdr = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
-                txtCol = IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
-                GlassRenderer.DrawLiquidGlassButton(g, rect, bgNormal, bgHover, bdr, isHover, 12);
-            }
-
-            Rectangle iconRect = new Rectangle(rect.X + 7, rect.Y + (rect.Height - 16) / 2, 16, 16);
-            if (isDoc) GlassRenderer.DrawVectorDocIcon(g, iconRect, txtCol);
-            else GlassRenderer.DrawVectorVideoIcon(g, iconRect, txtCol);
-
-            Rectangle txtRect = new Rectangle(rect.X + 23, rect.Y, rect.Width - 27, rect.Height);
-            TextRenderer.DrawText(g, label, isActive ? fBold : fReg, txtRect, txtCol,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
         }
     }
 
     /// <summary>
-    /// 自定义纯自绘分类导航栏（暖橙纸感胶囊 chip）
+    /// 窄模式自适应顶部横向分类栏（桌面级 7px 圆角 + 发丝分割 + 下拉全部分类入口 + macOS 右键菜单）
     /// </summary>
     public class CustomCategoryBar : Control
     {
@@ -834,9 +1188,11 @@ namespace HuahuaHelper
         public event Action OnDeleteCurrentCategoryRequested;
         public event Action<string> OnRenameCategoryRequested;
         public event Action<string> OnDeleteCategoryRequested;
+        public event Action<Point> OnAllCategoriesPopupRequested;
 
         private int _scrollX = 0;
         private int _hoverIndex = -1;
+        private bool _hoverPopBtn = false;
         private bool _hoverAddBtn = false;
         private bool _hoverDelBtn = false;
 
@@ -845,7 +1201,8 @@ namespace HuahuaHelper
             Categories = new List<string>();
             ActiveCategory = "全部";
             IsDarkTheme = false;
-            this.Height = 40;
+            this.Height = 36;
+            this.Cursor = Cursors.Hand;
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.OptimizedDoubleBuffer |
                           ControlStyles.UserPaint |
@@ -853,13 +1210,13 @@ namespace HuahuaHelper
 
             this.MouseWheel += (s, e) =>
             {
-                _scrollX += (e.Delta > 0 ? 30 : -30);
+                _scrollX += (e.Delta > 0 ? 32 : -32);
                 ClampScroll();
                 this.Invalidate();
             };
 
             this.MouseMove += CustomCategoryBar_MouseMove;
-            this.MouseLeave += (s, e) => { _hoverIndex = -1; _hoverAddBtn = false; _hoverDelBtn = false; this.Invalidate(); };
+            this.MouseLeave += (s, e) => { _hoverIndex = -1; _hoverPopBtn = false; _hoverAddBtn = false; _hoverDelBtn = false; this.Invalidate(); };
             this.MouseDown += CustomCategoryBar_MouseDown;
         }
 
@@ -869,6 +1226,7 @@ namespace HuahuaHelper
             if (cats != null) Categories.AddRange(cats);
             ActiveCategory = active ?? "全部";
             _hoverIndex = -1;
+            _hoverPopBtn = false;
             _hoverAddBtn = false;
             _hoverDelBtn = false;
             _scrollX = 0;
@@ -878,66 +1236,69 @@ namespace HuahuaHelper
 
         private int GetTotalWidth(Graphics g, Font font)
         {
-            int total = 12;
+            int total = 10;
             for (int i = 0; i < Categories.Count; i++)
             {
                 SizeF size = g.MeasureString(Categories[i], font);
-                total += (int)size.Width + 24;
+                total += (int)size.Width + 20;
             }
             return total;
         }
 
         private void ClampScroll()
         {
+            if (!this.IsHandleCreated) return;
             using (Graphics g = this.CreateGraphics())
-            using (Font f = new Font("Microsoft YaHei UI", 9F))
+            using (Font f = WarmTheme.CreateFont(9F))
             {
                 int total = GetTotalWidth(g, f);
-                int scrollAreaW = Math.Max(40, this.ClientSize.Width - 76);
+                int scrollAreaW = Math.Max(40, this.ClientSize.Width - 100);
                 int maxScroll = Math.Max(0, total - scrollAreaW);
                 if (_scrollX < -maxScroll) _scrollX = -maxScroll;
                 if (_scrollX > 0) _scrollX = 0;
             }
         }
 
-        private void CalculateHitBoxes(Graphics g, Font font, Font activeFont, out List<Rectangle> catRects, out Rectangle addRect, out Rectangle delRect)
+        private void CalculateHitBoxes(Graphics g, Font font, Font activeFont, out List<Rectangle> catRects, out Rectangle popRect, out Rectangle addRect, out Rectangle delRect)
         {
             catRects = new List<Rectangle>();
-            int curX = 12 + _scrollX;
+            int curX = 10 + _scrollX;
             for (int i = 0; i < Categories.Count; i++)
             {
                 string cat = Categories[i];
                 bool isActive = (cat == ActiveCategory);
                 Font drawFont = isActive ? activeFont : font;
                 SizeF size = g.MeasureString(cat, drawFont);
-                int itemW = (int)size.Width + 18;
-                catRects.Add(new Rectangle(curX, 6, itemW, 28));
-                curX += itemW + 6;
+                int itemW = (int)size.Width + 16;
+                catRects.Add(new Rectangle(curX, 5, itemW, 26));
+                curX += itemW + 5;
             }
-            // 固定在右侧，最窄窗口下也 100% 可见
-            int rightEdge = Math.Max(100, this.ClientSize.Width);
-            delRect = new Rectangle(rightEdge - 36, 6, 28, 28);
-            addRect = new Rectangle(rightEdge - 68, 6, 28, 28);
+            // 右侧固定工具按钮组：[∨] [+] [-]
+            int rightEdge = Math.Max(120, this.ClientSize.Width);
+            delRect = new Rectangle(rightEdge - 32, 5, 24, 26);
+            addRect = new Rectangle(rightEdge - 59, 5, 24, 26);
+            popRect = new Rectangle(rightEdge - 86, 5, 24, 26);
         }
 
-        private void HitTest(Point pt, out int hitIdx, out bool hitAdd, out bool hitDel)
+        private void HitTest(Point pt, out int hitIdx, out bool hitPop, out bool hitAdd, out bool hitDel)
         {
             hitIdx = -1;
+            hitPop = false;
             hitAdd = false;
             hitDel = false;
             using (Graphics g = this.CreateGraphics())
-            using (Font font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular))
-            using (Font activeFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold))
+            using (Font font = WarmTheme.CreateFont(9F, FontStyle.Regular))
+            using (Font activeFont = WarmTheme.CreateFont(9F, FontStyle.Bold))
             {
                 List<Rectangle> catRects;
-                Rectangle addRect, delRect;
-                CalculateHitBoxes(g, font, activeFont, out catRects, out addRect, out delRect);
+                Rectangle popRect, addRect, delRect;
+                CalculateHitBoxes(g, font, activeFont, out catRects, out popRect, out addRect, out delRect);
 
-                // 优先命中右侧固定的 [+] [-] 按钮
+                if (popRect.Contains(pt)) { hitPop = true; return; }
                 if (addRect.Contains(pt)) { hitAdd = true; return; }
                 if (delRect.Contains(pt)) { hitDel = true; return; }
 
-                int clipRight = Math.Max(40, this.ClientSize.Width - 74);
+                int clipRight = Math.Max(40, this.ClientSize.Width - 94);
                 if (pt.X < clipRight)
                 {
                     for (int i = 0; i < catRects.Count; i++)
@@ -955,12 +1316,13 @@ namespace HuahuaHelper
         private void CustomCategoryBar_MouseMove(object sender, MouseEventArgs e)
         {
             int prevIdx = _hoverIndex;
+            bool prevPop = _hoverPopBtn;
             bool prevAdd = _hoverAddBtn;
             bool prevDel = _hoverDelBtn;
 
-            HitTest(e.Location, out _hoverIndex, out _hoverAddBtn, out _hoverDelBtn);
+            HitTest(e.Location, out _hoverIndex, out _hoverPopBtn, out _hoverAddBtn, out _hoverDelBtn);
 
-            if (prevIdx != _hoverIndex || prevAdd != _hoverAddBtn || prevDel != _hoverDelBtn)
+            if (prevIdx != _hoverIndex || prevPop != _hoverPopBtn || prevAdd != _hoverAddBtn || prevDel != _hoverDelBtn)
             {
                 this.Invalidate();
             }
@@ -969,8 +1331,18 @@ namespace HuahuaHelper
         private void CustomCategoryBar_MouseDown(object sender, MouseEventArgs e)
         {
             int hitIdx;
-            bool hitAdd, hitDel;
-            HitTest(e.Location, out hitIdx, out hitAdd, out hitDel);
+            bool hitPop, hitAdd, hitDel;
+            HitTest(e.Location, out hitIdx, out hitPop, out hitAdd, out hitDel);
+
+            if (hitPop && e.Button == MouseButtons.Left)
+            {
+                if (OnAllCategoriesPopupRequested != null)
+                {
+                    Point screenPt = this.PointToScreen(new Point(this.ClientSize.Width - 92, this.Height - 2));
+                    OnAllCategoriesPopupRequested(screenPt);
+                }
+                return;
+            }
 
             if (hitAdd && e.Button == MouseButtons.Left)
             {
@@ -995,14 +1367,10 @@ namespace HuahuaHelper
                 }
                 else if (e.Button == MouseButtons.Right && cat != "全部")
                 {
-                    ContextMenuStrip cms = new ContextMenuStrip();
-                    ToolStripMenuItem itemRename = new ToolStripMenuItem("修改分类名称");
-                    itemRename.Click += (s, ev) => { if (OnRenameCategoryRequested != null) OnRenameCategoryRequested(cat); };
-                    ToolStripMenuItem itemDel = new ToolStripMenuItem("删除此分类");
-                    itemDel.Click += (s, ev) => { if (OnDeleteCategoryRequested != null) OnDeleteCategoryRequested(cat); };
-
-                    cms.Items.Add(itemRename);
-                    cms.Items.Add(itemDel);
+                    ContextMenuStrip cms = ModernMenuHelper.CreateMenu(IsDarkTheme);
+                    ModernMenuHelper.AddItem(cms, "修改分类名称", "F2", () => { if (OnRenameCategoryRequested != null) OnRenameCategoryRequested(cat); }, false);
+                    ModernMenuHelper.AddSeparator(cms);
+                    ModernMenuHelper.AddItem(cms, "删除此分类", "Del", () => { if (OnDeleteCategoryRequested != null) OnDeleteCategoryRequested(cat); }, true);
                     cms.Show(this, e.Location);
                 }
             }
@@ -1015,8 +1383,8 @@ namespace HuahuaHelper
             g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
             g.SmoothingMode = SmoothingMode.AntiAlias;
 
-            Color barBg = IsDarkTheme ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
-            Color bottomLine = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+            Color barBg = IsDarkTheme ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            Color bottomLine = IsDarkTheme ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
 
             g.Clear(barBg);
             using (Pen linePen = new Pen(bottomLine, 1))
@@ -1024,14 +1392,14 @@ namespace HuahuaHelper
                 g.DrawLine(linePen, 0, this.Height - 1, this.Width, this.Height - 1);
             }
 
-            using (Font font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular))
-            using (Font activeFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold))
+            using (Font font = WarmTheme.CreateFont(9F, FontStyle.Regular))
+            using (Font activeFont = WarmTheme.CreateFont(9F, FontStyle.Bold))
             {
                 List<Rectangle> catRects;
-                Rectangle addRect, delRect;
-                CalculateHitBoxes(g, font, activeFont, out catRects, out addRect, out delRect);
+                Rectangle popRect, addRect, delRect;
+                CalculateHitBoxes(g, font, activeFont, out catRects, out popRect, out addRect, out delRect);
 
-                int clipRight = Math.Max(40, this.ClientSize.Width - 74);
+                int clipRight = Math.Max(40, this.ClientSize.Width - 94);
                 g.SetClip(new Rectangle(0, 0, clipRight, this.Height));
 
                 for (int i = 0; i < Categories.Count; i++)
@@ -1043,60 +1411,51 @@ namespace HuahuaHelper
 
                     if (isActive)
                     {
-                        // 选中态：主色液态玻璃胶囊 chip
-                        GlassRenderer.DrawLiquidGlassButton(g, rect, WarmTheme.Orange, true, IsDarkTheme, isHover, false, 14);
-                        TextRenderer.DrawText(g, cat, activeFont, rect, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                        GlassRenderer.DrawModernButtonSurface(g, rect, ButtonVariant.Primary, WarmTheme.Orange, IsDarkTheme, isHover ? 1f : 0f, false, false, true, WarmTheme.RadiusControl);
+                        TextRenderer.DrawText(g, cat, activeFont, rect, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
                     }
                     else
                     {
-                        // 未选中态：白底（深色下透明）+ 1px 边框
-                        Color bgNormal = IsDarkTheme ? Color.Transparent : WarmTheme.LightCardBg;
-                        Color bgHover = IsDarkTheme ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg;
-                        Color bdr = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+                        Color bgNormal = isHover ? (IsDarkTheme ? WarmTheme.GhostHoverDark : WarmTheme.GhostHoverLight) : Color.Transparent;
+                        Color bdr = isHover ? (IsDarkTheme ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight) : Color.Transparent;
                         Color txt = IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
-
-                        GlassRenderer.DrawLiquidGlassButton(g, rect, bgNormal, bgHover, bdr, isHover, 14);
-                        TextRenderer.DrawText(g, cat, font, rect, txt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                        GlassRenderer.DrawLiquidGlassButton(g, rect, bgNormal, bgNormal, bdr, isHover, WarmTheme.RadiusControl);
+                        TextRenderer.DrawText(g, cat, font, rect, txt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
                     }
                 }
 
                 g.ResetClip();
 
-                // 用实底遮罩盖住右侧固定区，彻底避免左侧滚动文字/胶囊渗入 [+] [-] 下方
-                int dockLeft = Math.Max(40, this.ClientSize.Width - 74);
+                int dockLeft = Math.Max(40, this.ClientSize.Width - 94);
                 using (Brush maskBrush = new SolidBrush(barBg))
                 {
                     g.FillRectangle(maskBrush, dockLeft, 0, this.ClientSize.Width - dockLeft, this.Height - 1);
                 }
                 using (Pen divPen = new Pen(bottomLine, 1))
                 {
-                    g.DrawLine(divPen, dockLeft, 6, dockLeft, this.Height - 7);
+                    g.DrawLine(divPen, dockLeft, 7, dockLeft, this.Height - 8);
                 }
 
-                // [+] 增加分类：幽灵按钮 28x28，矢量加号
-                Color ghostBdr = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
-                Color addHoverBg = IsDarkTheme ? WarmTheme.DarkRowHover : WarmTheme.LightRowHover;
-                Color addIconCol = _hoverAddBtn
-                    ? (IsDarkTheme ? WarmTheme.OrangeHover : WarmTheme.Orange)
-                    : (IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText);
+                Color iconMuted = IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
 
-                GlassRenderer.DrawLiquidGlassButton(g, addRect, Color.Transparent, addHoverBg, ghostBdr, _hoverAddBtn, 6);
-                GlassRenderer.DrawVectorPlusIcon(g, addRect, addIconCol);
+                // [∨] 全部分类浮层触发按钮（幽灵风格）
+                GlassRenderer.DrawModernButtonSurface(g, popRect, ButtonVariant.Ghost, WarmTheme.Orange, IsDarkTheme, _hoverPopBtn ? 1f : 0f, false, false, true, 6);
+                GlassRenderer.DrawVectorChevronDownIcon(g, popRect, _hoverPopBtn ? WarmTheme.Orange : iconMuted);
 
-                // [-] 删除分类：幽灵按钮 28x28，矢量减号，悬停变砖红
-                Color delHoverBg = IsDarkTheme ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226);
-                Color delIconCol = _hoverDelBtn
-                    ? WarmTheme.DangerRed
-                    : (IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText);
+                // [+] 新建分类（幽灵风格）
+                GlassRenderer.DrawModernButtonSurface(g, addRect, ButtonVariant.Ghost, WarmTheme.Orange, IsDarkTheme, _hoverAddBtn ? 1f : 0f, false, false, true, 6);
+                GlassRenderer.DrawVectorPlusIcon(g, addRect, _hoverAddBtn ? WarmTheme.Orange : iconMuted);
 
-                GlassRenderer.DrawLiquidGlassButton(g, delRect, Color.Transparent, delHoverBg, ghostBdr, _hoverDelBtn, 6);
-                GlassRenderer.DrawVectorMinusIcon(g, delRect, delIconCol);
+                // [-] 删除分类（警示红悬停着底）
+                Color delHoverBg = Color.FromArgb(IsDarkTheme ? 48 : 26, WarmTheme.DestructiveRed);
+                GlassRenderer.DrawModernButtonSurface(g, delRect, ButtonVariant.Ghost, WarmTheme.DestructiveRed, IsDarkTheme, _hoverDelBtn ? 1f : 0f, false, false, true, 6, delHoverBg);
+                GlassRenderer.DrawVectorMinusIcon(g, delRect, _hoverDelBtn ? WarmTheme.DestructiveRed : iconMuted);
             }
         }
     }
 
     /// <summary>
-    /// 暖橙纸感工作区列表（双行密排、扁平实色按键、自绘细滚动条、空状态）
+    /// macOS × iOS 融合工作区列表（双行密排、四级行内按钮、6px 悬浮渐隐滚动条、键盘导航与右键菜单）
     /// </summary>
     public class MiniPhraseListView : Control
     {
@@ -1110,11 +1469,20 @@ namespace HuahuaHelper
 
         private int _hoverIndex = -1;
         private int _selectedIndex = -1;
-        private int _hoverBtnType = 0; // 0: 无, 1: 编辑, 2: 填入, 3: 发送
+        private int _hoverBtnType = 0;   // 0: 无, 1: 编辑(Ghost), 2: 填入(Secondary), 3: 发送(Primary)
+        private int _pressedBtnType = 0; // 按压微下沉反馈
         private int _scrollOffset = 0;
         private bool _isDraggingScroll = false;
+        private bool _isHoveringScroll = false;
         private int _dragStartY = 0;
         private int _dragStartOffset = 0;
+
+        // 悬浮滚动条渐显/淡出状态机
+        private float _scrollBarAlpha = 0f;
+        private bool _scrollBarTargetVisible = false;
+        private int _scrollHideCountdown = 0;
+        private System.Windows.Forms.Timer _scrollFadeTimer;
+
         private Bitmap _cachedBgBitmap = null;
         private int _bgRenderVersion = 0;
         private Font _titleFont;
@@ -1124,12 +1492,14 @@ namespace HuahuaHelper
 
         public event Action<PhraseItem, bool> OnActionTriggered;
         public event Action<PhraseItem> OnEditRequested;
+        public event Action<PhraseItem> OnDeleteRequested;
+        public event Action<PhraseItem> OnCopyRequested;
 
         public MiniPhraseListView()
         {
             Items = new List<PhraseItem>();
-            ItemHeight = 36;
-            CustomFontSize = 9.0F;
+            ItemHeight = 40;
+            CustomFontSize = 9.5F;
             ThemeType = "white";
             CurrentMode = "text";
             RebuildFonts();
@@ -1137,7 +1507,32 @@ namespace HuahuaHelper
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.OptimizedDoubleBuffer |
                           ControlStyles.UserPaint |
-                          ControlStyles.ResizeRedraw, true);
+                          ControlStyles.ResizeRedraw |
+                          ControlStyles.Selectable, true);
+            this.TabStop = true;
+
+            _scrollFadeTimer = new System.Windows.Forms.Timer { Interval = 30 };
+            _scrollFadeTimer.Tick += (s, e) =>
+            {
+                if (_scrollHideCountdown > 0 && !_isDraggingScroll && !_isHoveringScroll)
+                {
+                    _scrollHideCountdown -= 30;
+                    if (_scrollHideCountdown <= 0) _scrollBarTargetVisible = false;
+                }
+
+                float target = _scrollBarTargetVisible ? 1f : 0f;
+                float diff = target - _scrollBarAlpha;
+                if (Math.Abs(diff) < 0.04f)
+                {
+                    _scrollBarAlpha = target;
+                    if (!_scrollBarTargetVisible && _scrollHideCountdown <= 0) _scrollFadeTimer.Stop();
+                }
+                else
+                {
+                    _scrollBarAlpha += diff * 0.28f;
+                }
+                this.Invalidate();
+            };
 
             this.MouseWheel += (s, e) =>
             {
@@ -1147,26 +1542,48 @@ namespace HuahuaHelper
                     _scrollOffset -= (e.Delta / 120) * ItemHeight;
                     if (_scrollOffset < 0) _scrollOffset = 0;
                     if (_scrollOffset > maxScroll) _scrollOffset = maxScroll;
+                    ShowScrollBarBriefly();
                     this.Invalidate();
                 }
             };
 
             this.MouseMove += MiniPhraseListView_MouseMove;
-            this.MouseLeave += (s, e) => { _hoverIndex = -1; _hoverBtnType = 0; this.Invalidate(); };
+            this.MouseLeave += (s, e) =>
+            {
+                _hoverIndex = -1;
+                _hoverBtnType = 0;
+                _pressedBtnType = 0;
+                _isHoveringScroll = false;
+                this.Invalidate();
+            };
             this.MouseDown += MiniPhraseListView_MouseDown;
-            this.MouseUp += (s, e) => { _isDraggingScroll = false; };
+            this.MouseUp += (s, e) =>
+            {
+                _isDraggingScroll = false;
+                if (_pressedBtnType != 0) { _pressedBtnType = 0; this.Invalidate(); }
+            };
             this.DoubleClick += MiniPhraseListView_DoubleClick;
+            this.GotFocus += (s, e) => this.Invalidate();
+            this.LostFocus += (s, e) => this.Invalidate();
+        }
+
+        private void ShowScrollBarBriefly()
+        {
+            if (!NeedsScrollBar()) return;
+            _scrollBarTargetVisible = true;
+            _scrollHideCountdown = 900; // 停止滚动约 0.9s 后优雅淡出
+            if (!_scrollFadeTimer.Enabled) _scrollFadeTimer.Start();
         }
 
         private void RebuildFonts()
         {
             if (_titleFont != null) _titleFont.Dispose();
             if (_secFont != null) _secFont.Dispose();
-            if (_btnFont == null) _btnFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular);
-            if (_btnBoldFont == null) _btnBoldFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
+            if (_btnFont == null) _btnFont = WarmTheme.CreateFont(8.8F, FontStyle.Regular);
+            if (_btnBoldFont == null) _btnBoldFont = WarmTheme.CreateFont(8.8F, FontStyle.Bold);
 
-            _titleFont = new Font("Microsoft YaHei UI", CustomFontSize, FontStyle.Regular);
-            _secFont = new Font("Microsoft YaHei UI", GetSecondaryFontSize(CustomFontSize), FontStyle.Regular);
+            _titleFont = WarmTheme.CreateFont(CustomFontSize, FontStyle.Regular);
+            _secFont = WarmTheme.CreateFont(GetSecondaryFontSize(CustomFontSize), FontStyle.Regular);
         }
 
         private void RebuildBgCacheAsync()
@@ -1250,8 +1667,87 @@ namespace HuahuaHelper
             _selectedIndex = -1;
             _hoverIndex = -1;
             _hoverBtnType = 0;
+            _pressedBtnType = 0;
             ClampScroll();
             this.Invalidate();
+        }
+
+        public PhraseItem GetSelectedOrFirstItem()
+        {
+            if (Items == null || Items.Count == 0) return null;
+            if (_selectedIndex >= 0 && _selectedIndex < Items.Count) return Items[_selectedIndex];
+            return Items[0];
+        }
+
+        public void SelectFirstRow()
+        {
+            if (Items != null && Items.Count > 0)
+            {
+                _selectedIndex = 0;
+                _scrollOffset = 0;
+                this.Focus();
+                this.Invalidate();
+            }
+        }
+
+        protected override bool IsInputKey(Keys keyData)
+        {
+            Keys k = keyData & Keys.KeyCode;
+            if (k == Keys.Up || k == Keys.Down || k == Keys.Enter || k == Keys.Delete) return true;
+            return base.IsInputKey(keyData);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            if (Items == null || Items.Count == 0) return;
+
+            if (e.KeyCode == Keys.Down)
+            {
+                _selectedIndex = (_selectedIndex < 0) ? 0 : Math.Min(Items.Count - 1, _selectedIndex + 1);
+                EnsureSelectedVisible();
+                this.Invalidate();
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.Up)
+            {
+                _selectedIndex = (_selectedIndex < 0) ? 0 : Math.Max(0, _selectedIndex - 1);
+                EnsureSelectedVisible();
+                this.Invalidate();
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.Enter && _selectedIndex >= 0 && _selectedIndex < Items.Count)
+            {
+                bool sendEnter = !e.Shift;
+                if (OnActionTriggered != null) OnActionTriggered(Items[_selectedIndex], sendEnter);
+                e.Handled = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.E && _selectedIndex >= 0 && _selectedIndex < Items.Count)
+            {
+                if (OnEditRequested != null) OnEditRequested(Items[_selectedIndex]);
+                e.Handled = true;
+            }
+            else if (e.Control && e.KeyCode == Keys.C && _selectedIndex >= 0 && _selectedIndex < Items.Count)
+            {
+                if (OnCopyRequested != null) OnCopyRequested(Items[_selectedIndex]);
+                e.Handled = true;
+            }
+            else if (e.KeyCode == Keys.Delete && _selectedIndex >= 0 && _selectedIndex < Items.Count)
+            {
+                if (OnDeleteRequested != null) OnDeleteRequested(Items[_selectedIndex]);
+                e.Handled = true;
+            }
+        }
+
+        private void EnsureSelectedVisible()
+        {
+            if (_selectedIndex < 0) return;
+            int top = _selectedIndex * ItemHeight;
+            int bot = top + ItemHeight;
+            if (top < _scrollOffset) _scrollOffset = top;
+            else if (bot > _scrollOffset + this.ClientSize.Height) _scrollOffset = bot - this.ClientSize.Height;
+            ClampScroll();
+            ShowScrollBarBriefly();
         }
 
         protected override void OnResize(EventArgs e)
@@ -1284,26 +1780,43 @@ namespace HuahuaHelper
             int viewH = this.ClientSize.Height;
             if (totalH <= viewH || viewH <= 0) return Rectangle.Empty;
 
-            int thumbH = Math.Max(24, (int)((double)viewH * viewH / totalH));
+            int thumbH = Math.Max(26, (int)((double)viewH * viewH / totalH));
             int maxThumbY = viewH - thumbH;
             int maxScroll = totalH - viewH;
             int thumbY = maxScroll > 0 ? (int)((double)_scrollOffset / maxScroll * maxThumbY) : 0;
-            return new Rectangle(this.ClientSize.Width - 8, thumbY + 2, 5, Math.Max(18, thumbH - 4));
+            int barW = (_isHoveringScroll || _isDraggingScroll) ? 7 : 6;
+            return new Rectangle(this.ClientSize.Width - barW - 3, thumbY + 3, barW, Math.Max(20, thumbH - 6));
         }
 
         private float GetSecondaryFontSize(float titleSize)
         {
             if (titleSize >= 15.0F) return 11.0F;
-            if (titleSize >= 13.0F) return 10.0F;
-            if (titleSize >= 11.0F) return 9.0F;
+            if (titleSize >= 13.0F) return 9.8F;
+            if (titleSize >= 11.0F) return 8.8F;
             return 8.0F;
+        }
+
+        private void ComputeRowButtonRects(int rowY, int usableW, out Rectangle rEdit, out Rectangle rFill, out Rectangle rSend)
+        {
+            int sendW = 36;
+            int fillW = 32;
+            int editW = 26;
+            int btnH = Math.Min(26, ItemHeight - 10);
+            int btnY = rowY + (ItemHeight - btnH) / 2;
+
+            int sendLeft = usableW - sendW - 6;
+            int fillLeft = sendLeft - fillW - 4;
+            int editLeft = fillLeft - editW - 4;
+
+            rSend = new Rectangle(sendLeft, btnY, sendW, btnH);
+            rFill = new Rectangle(fillLeft, btnY, fillW, btnH);
+            rEdit = new Rectangle(editLeft, btnY, editW, btnH);
         }
 
         private void MiniPhraseListView_MouseMove(object sender, MouseEventArgs e)
         {
             if (_isDraggingScroll)
             {
-                int totalH = Items.Count * ItemHeight;
                 int viewH = this.ClientSize.Height;
                 Rectangle thumb = GetScrollThumbRect();
                 int trackRange = Math.Max(1, viewH - thumb.Height);
@@ -1311,8 +1824,17 @@ namespace HuahuaHelper
                 int deltaY = e.Y - _dragStartY;
                 _scrollOffset = _dragStartOffset + (int)((double)deltaY / trackRange * maxScroll);
                 ClampScroll();
+                ShowScrollBarBriefly();
                 this.Invalidate();
                 return;
+            }
+
+            bool overScrollZone = NeedsScrollBar() && e.X >= this.ClientSize.Width - 14;
+            if (overScrollZone != _isHoveringScroll)
+            {
+                _isHoveringScroll = overScrollZone;
+                if (overScrollZone) ShowScrollBarBriefly();
+                this.Invalidate();
             }
 
             if (Items.Count == 0)
@@ -1332,23 +1854,10 @@ namespace HuahuaHelper
             if (newIdx >= 0 && newIdx < Items.Count)
             {
                 _hoverIndex = newIdx;
-                int rightMargin = NeedsScrollBar() ? 12 : 4;
-                int usableW = this.ClientSize.Width - rightMargin;
+                int usableW = this.ClientSize.Width - 6;
                 int itemY = (newIdx * ItemHeight) - offset;
-
-                int sendW = 36;
-                int fillW = 32;
-                int editW = 24;
-                int btnH = Math.Min(24, ItemHeight - 8);
-                int btnY = itemY + (ItemHeight - btnH) / 2;
-
-                int sendLeft = usableW - sendW - 8;
-                int fillLeft = sendLeft - fillW - 4;
-                int editLeft = fillLeft - editW - 4;
-
-                Rectangle rSend = new Rectangle(sendLeft, btnY, sendW, btnH);
-                Rectangle rFill = new Rectangle(fillLeft, btnY, fillW, btnH);
-                Rectangle rEdit = new Rectangle(editLeft, btnY, editW, btnH);
+                Rectangle rEdit, rFill, rSend;
+                ComputeRowButtonRects(itemY, usableW, out rEdit, out rFill, out rSend);
 
                 if (rSend.Contains(e.Location)) _hoverBtnType = 3;
                 else if (rFill.Contains(e.Location)) _hoverBtnType = 2;
@@ -1367,9 +1876,9 @@ namespace HuahuaHelper
 
         private void MiniPhraseListView_MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button != MouseButtons.Left) return;
+            this.Focus();
 
-            if (NeedsScrollBar() && e.X >= this.ClientSize.Width - 12)
+            if (e.Button == MouseButtons.Left && NeedsScrollBar() && e.X >= this.ClientSize.Width - 14)
             {
                 Rectangle thumb = GetScrollThumbRect();
                 if (thumb.Contains(e.Location))
@@ -1377,6 +1886,7 @@ namespace HuahuaHelper
                     _isDraggingScroll = true;
                     _dragStartY = e.Y;
                     _dragStartOffset = _scrollOffset;
+                    ShowScrollBarBriefly();
                     return;
                 }
             }
@@ -1401,19 +1911,39 @@ namespace HuahuaHelper
             _hoverIndex = clickIdx;
             _selectedIndex = clickIdx;
             var item = Items[clickIdx];
-            if (_hoverBtnType == 3)
+
+            if (e.Button == MouseButtons.Right)
             {
-                if (OnActionTriggered != null) OnActionTriggered(item, true);
+                bool isDark = (ThemeType == "black");
+                ContextMenuStrip cms = ModernMenuHelper.CreateMenu(isDark);
+                ModernMenuHelper.AddItem(cms, "直接发送", "Enter", () => { if (OnActionTriggered != null) OnActionTriggered(item, true); }, false);
+                ModernMenuHelper.AddItem(cms, "填入输入框", "Shift+Enter", () => { if (OnActionTriggered != null) OnActionTriggered(item, false); }, false);
+                ModernMenuHelper.AddItem(cms, "复制正文内容", "Ctrl+C", () => { if (OnCopyRequested != null) OnCopyRequested(item); }, false);
+                ModernMenuHelper.AddSeparator(cms);
+                ModernMenuHelper.AddItem(cms, "编辑条目...", "Ctrl+E", () => { if (OnEditRequested != null) OnEditRequested(item); }, false);
+                ModernMenuHelper.AddItem(cms, "删除条目", "Del", () => { if (OnDeleteRequested != null) OnDeleteRequested(item); }, true);
+                this.Invalidate();
+                cms.Show(this, e.Location);
+                return;
             }
-            else if (_hoverBtnType == 2)
+
+            if (e.Button == MouseButtons.Left)
             {
-                if (OnActionTriggered != null) OnActionTriggered(item, false);
+                if (_hoverBtnType > 0) _pressedBtnType = _hoverBtnType;
+                if (_hoverBtnType == 3)
+                {
+                    if (OnActionTriggered != null) OnActionTriggered(item, true);
+                }
+                else if (_hoverBtnType == 2)
+                {
+                    if (OnActionTriggered != null) OnActionTriggered(item, false);
+                }
+                else if (_hoverBtnType == 1)
+                {
+                    if (OnEditRequested != null) OnEditRequested(item);
+                }
+                this.Invalidate();
             }
-            else if (_hoverBtnType == 1)
-            {
-                if (OnEditRequested != null) OnEditRequested(item);
-            }
-            this.Invalidate();
         }
 
         private void MiniPhraseListView_DoubleClick(object sender, EventArgs e)
@@ -1450,6 +1980,20 @@ namespace HuahuaHelper
             g.DrawImage(img, target, srcRect, GraphicsUnit.Pixel);
         }
 
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (_scrollFadeTimer != null) { _scrollFadeTimer.Stop(); _scrollFadeTimer.Dispose(); _scrollFadeTimer = null; }
+                if (_cachedBgBitmap != null) { _cachedBgBitmap.Dispose(); _cachedBgBitmap = null; }
+                if (_titleFont != null) { _titleFont.Dispose(); _titleFont = null; }
+                if (_secFont != null) { _secFont.Dispose(); _secFont = null; }
+                if (_btnFont != null) { _btnFont.Dispose(); _btnFont = null; }
+                if (_btnBoldFont != null) { _btnBoldFont.Dispose(); _btnBoldFont = null; }
+            }
+            base.Dispose(disposing);
+        }
+
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
@@ -1483,14 +2027,14 @@ namespace HuahuaHelper
                 g.Clear(WarmTheme.LightPaperBg);
             }
 
-            // 空状态绘制（居中显示花花头像小图 + 提示语）
+            // 空状态绘制（居中显示花花头像小图 + 引导文字）
             if (Items.Count == 0)
             {
                 int cy = this.ClientSize.Height / 2;
                 int cx = this.ClientSize.Width / 2;
                 if (EmptyAvatarImage != null)
                 {
-                    Rectangle imgRect = new Rectangle(cx - 24, cy - 42, 48, 48);
+                    Rectangle imgRect = new Rectangle(cx - 24, cy - 44, 48, 48);
                     g.InterpolationMode = InterpolationMode.HighQualityBicubic;
                     using (GraphicsPath clip = new GraphicsPath())
                     {
@@ -1501,20 +2045,20 @@ namespace HuahuaHelper
                     }
                     Color ringCol = WarmTheme.Current.IsPink
                         ? WarmTheme.Orange
-                        : (isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder);
-                    float ringW = WarmTheme.Current.IsPink ? 2.0f : 1.0f;
+                        : (isDark ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight);
+                    float ringW = WarmTheme.Current.IsPink ? 1.8f : 1.0f;
                     using (Pen ringPen = new Pen(ringCol, ringW))
                     {
                         g.DrawEllipse(ringPen, imgRect);
                     }
                 }
                 Color emptyTextCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
-                Rectangle txtRect = new Rectangle(12, cy + 14, this.ClientSize.Width - 24, 24);
-                string emptyHint = (CurrentMode == "video") ? "还没有视频快捷方式，点右上角加一个吧" : "还没有话术，点右上角加一个吧";
-                using (Font emptyFont = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular))
+                Rectangle txtRect = new Rectangle(12, cy + 12, this.ClientSize.Width - 24, 24);
+                string emptyHint = (CurrentMode == "video") ? "暂无视频快捷方式 · 按 Ctrl+N 新增" : "暂无话术条目 · 按 Ctrl+N 新增";
+                using (Font emptyFont = WarmTheme.CreateFont(9F, FontStyle.Regular))
                 {
                     TextRenderer.DrawText(g, emptyHint, emptyFont, txtRect, emptyTextCol,
-                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                        TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
                 }
                 return;
             }
@@ -1524,12 +2068,12 @@ namespace HuahuaHelper
             int count = (this.ClientSize.Height / ItemHeight) + 2;
             int end = Math.Min(Items.Count - 1, start + count);
 
-            int rightMargin = NeedsScrollBar() ? 12 : 4;
-            int usableW = this.ClientSize.Width - rightMargin;
+            // 悬浮滚动条不常驻挤压列表内容宽度
+            int usableW = this.ClientSize.Width - 6;
 
             Color textPrimary = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
             Color textSecondary = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
-            Color rowLine = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+            Color rowLine = isDark ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
 
             Font titleFont = _titleFont;
             Font secFont = _secFont;
@@ -1545,21 +2089,20 @@ namespace HuahuaHelper
                     bool isHover = (i == _hoverIndex);
                     bool isSelected = (i == _selectedIndex);
 
-                    Rectangle rowRect = new Rectangle(4, y + 1, usableW - 6, ItemHeight - 2);
+                    Rectangle rowRect = new Rectangle(6, y + 1, Math.Max(40, usableW - 6), ItemHeight - 2);
 
-                    // 行背景（白底 / 深暖灰，悬停暖橙 tint）
                     Color rowBg;
                     if (isDark)
                     {
                         if (isSelected) rowBg = WarmTheme.DarkRowSelected;
                         else if (isHover) rowBg = WarmTheme.DarkRowHover;
-                        else rowBg = WarmTheme.DarkCardBg;
+                        else rowBg = WarmTheme.DarkPaperBg;
                     }
                     else if (ThemeType == "custom")
                     {
                         if (isSelected) rowBg = Color.FromArgb(230, WarmTheme.LightRowSelected);
                         else if (isHover) rowBg = Color.FromArgb(215, WarmTheme.LightRowHover);
-                        else rowBg = Color.FromArgb(155, WarmTheme.LightCardBg);
+                        else rowBg = Color.FromArgb(165, WarmTheme.LightCardBg);
                     }
                     else
                     {
@@ -1568,39 +2111,37 @@ namespace HuahuaHelper
                         else rowBg = WarmTheme.LightCardBg;
                     }
 
-                    if (isHover || isSelected)
+                    if (isHover || isSelected || ThemeType == "custom")
                     {
-                        using (GraphicsPath rowPath = GlassRenderer.CreateRoundedPath(rowRect, 4))
+                        using (GraphicsPath rowPath = GlassRenderer.CreateRoundedPath(rowRect, 8))
                         using (Brush bgBrush = new SolidBrush(rowBg))
                         {
                             g.FillPath(bgBrush, rowPath);
+                            if (isSelected && this.Focused && this.ShowFocusCues)
+                            {
+                                using (Pen fp = new Pen(WarmTheme.ApplyAlpha(WarmTheme.Orange, 0.55f), 1.5f))
+                                    g.DrawPath(fp, rowPath);
+                            }
                         }
                     }
                     else
                     {
                         using (Brush bgBrush = new SolidBrush(rowBg))
                         {
-                            g.FillRectangle(bgBrush, rowRect);
+                            g.FillRectangle(bgBrush, new Rectangle(0, y, this.ClientSize.Width, ItemHeight));
                         }
                     }
-                    g.DrawLine(linePen, 12, y + ItemHeight - 1, usableW - 4, y + ItemHeight - 1);
 
-                    int sendW = 36;
-                    int fillW = 32;
-                    int editW = 24;
-                    int btnH = Math.Min(24, ItemHeight - 8);
-                    int btnY = y + (ItemHeight - btnH) / 2;
+                    if (!isHover && !isSelected)
+                    {
+                        g.DrawLine(linePen, 14, y + ItemHeight - 1, usableW - 6, y + ItemHeight - 1);
+                    }
 
-                    int sendLeft = usableW - sendW - 8;
-                    int fillLeft = sendLeft - fillW - 4;
-                    int editLeft = fillLeft - editW - 4;
+                    Rectangle rEdit, rFill, rSend;
+                    ComputeRowButtonRects(y, usableW, out rEdit, out rFill, out rSend);
 
-                    Rectangle rSend = new Rectangle(sendLeft, btnY, sendW, btnH);
-                    Rectangle rFill = new Rectangle(fillLeft, btnY, fillW, btnH);
-                    Rectangle rEdit = new Rectangle(editLeft, btnY, editW, btnH);
-
-                    int textLeft = 12;
-                    int textW = editLeft - textLeft - 6;
+                    int textLeft = 14;
+                    int textW = Math.Max(20, rEdit.Left - textLeft - 8);
                     int line1H = (int)Math.Ceiling(titleFont.GetHeight(g));
                     int line2H = (int)Math.Ceiling(secFont.GetHeight(g));
                     int totalTxtH = line1H + line2H;
@@ -1614,48 +2155,46 @@ namespace HuahuaHelper
 
                     string subInfo = string.IsNullOrEmpty(item.Category) ? "未分类" : item.Category;
                     if (item.ItemType == "video" && !string.IsNullOrEmpty(item.VideoPath))
-                    {
                         subInfo += " · 视频";
-                    }
                     else if (!string.IsNullOrEmpty(item.ImagePath))
-                    {
                         subInfo += " · 带图";
-                    }
+
                     TextRenderer.DrawText(g, subInfo, secFont, secRect, textSecondary,
                         TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
 
-                    // 次按钮通用色（白底 / 深暖灰，1px 暖边框）
-                    Color secNormal = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
-                    Color secHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg;
-                    Color secBdr = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
-                    Color secTxt = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
-
-                    // 1. 编辑按钮（矢量铅笔图标）
+                    // 1. 编辑（Ghost 无边框幽灵按钮：平时透明，悬停现柔和圆角底）
                     bool hoverEdit = (isHover && _hoverBtnType == 1);
-                    GlassRenderer.DrawLiquidGlassButton(g, rEdit, secNormal, secHover, secBdr, hoverEdit, 6);
-                    GlassRenderer.DrawVectorEditIcon(g, rEdit, isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText);
+                    bool pressEdit = (isHover && _pressedBtnType == 1);
+                    GlassRenderer.DrawModernButtonSurface(g, rEdit, ButtonVariant.Ghost, WarmTheme.Orange, isDark, hoverEdit ? 1f : 0f, pressEdit, false, true, 6);
+                    Color editIconCol = hoverEdit
+                        ? (isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary)
+                        : (isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted);
+                    GlassRenderer.DrawVectorEditIcon(g, rEdit, editIconCol);
 
-                    // 2. 填入按钮
+                    // 2. 填入（Secondary 次级质感按钮）
                     bool hoverFill = (isHover && _hoverBtnType == 2);
-                    GlassRenderer.DrawLiquidGlassButton(g, rFill, secNormal, secHover, secBdr, hoverFill, 6);
-                    TextRenderer.DrawText(g, "填", btnFont, rFill, secTxt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    bool pressFill = (isHover && _pressedBtnType == 2);
+                    GlassRenderer.DrawModernButtonSurface(g, rFill, ButtonVariant.Secondary, WarmTheme.Orange, isDark, hoverFill ? 1f : 0f, pressFill, false, true, 6);
+                    Color fillTxt = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+                    TextRenderer.DrawText(g, "填", btnFont, rFill, fillTxt, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
 
-                    // 3. 发送按钮（iOS 26 Liquid Glass 主按钮）
+                    // 3. 发送（Primary 强调色主按钮 + inset 高光）
                     bool hoverSend = (isHover && _hoverBtnType == 3);
-                    GlassRenderer.DrawLiquidGlassButton(g, rSend,
-                        WarmTheme.Orange, true, isDark, hoverSend, false, 6);
-                    TextRenderer.DrawText(g, "发", btnBoldFont, rSend, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
+                    bool pressSend = (isHover && _pressedBtnType == 3);
+                    GlassRenderer.DrawModernButtonSurface(g, rSend, ButtonVariant.Primary, WarmTheme.Orange, isDark, hoverSend ? 1f : 0f, pressSend, false, true, 6);
+                    TextRenderer.DrawText(g, "发", btnBoldFont, rSend, Color.White, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
                 }
             }
 
-            // 细滚动条滑块
-            if (NeedsScrollBar())
+            // macOS 风格极细 (6px) 圆角半透明悬浮滚动条，仅悬停或滚动时淡入显现
+            if (NeedsScrollBar() && _scrollBarAlpha > 0.02f)
             {
                 Rectangle thumb = GetScrollThumbRect();
                 if (!thumb.IsEmpty)
                 {
-                    Color thumbCol = isDark ? WarmTheme.DarkScrollThumb : WarmTheme.LightScrollThumb;
-                    using (GraphicsPath thumbPath = GlassRenderer.CreateRoundedPath(thumb, 2))
+                    Color baseThumb = isDark ? WarmTheme.DarkScrollThumb : WarmTheme.LightScrollThumb;
+                    Color thumbCol = WarmTheme.ApplyAlpha(baseThumb, _scrollBarAlpha);
+                    using (GraphicsPath thumbPath = GlassRenderer.CreateRoundedPath(thumb, 3))
                     using (Brush thumbBrush = new SolidBrush(thumbCol))
                     {
                         g.FillPath(thumbBrush, thumbPath);
@@ -1666,7 +2205,7 @@ namespace HuahuaHelper
     }
 
     /// <summary>
-    /// 解决 WinForms 子控件透明背景继承父面板绘制色块的问题（消除文字/图标旁黑框）
+    /// 一体化顶部栏背景渲染面板（1px 发丝分割线 + 支持无边框窗口拖拽）
     /// </summary>
     public class GlassTopBarPanel : Panel
     {
@@ -1685,11 +2224,895 @@ namespace HuahuaHelper
             Color baseBg = IsDarkTheme ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
             e.Graphics.Clear(baseBg);
             GlassRenderer.DrawLiquidGlassPanel(e.Graphics, this.ClientRectangle, IsDarkTheme, 0);
-            Color lineCol = IsDarkTheme ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+            Color lineCol = IsDarkTheme ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
             using (Pen p = new Pen(lineCol, 1))
             {
                 e.Graphics.DrawLine(p, 0, this.Height - 1, this.Width, this.Height - 1);
             }
+        }
+    }
+
+    /// <summary>
+    /// macOS / iOS 分段控制器 (Segmented Control)：凹槽底 + 滑动白/深灰滑块 + 160ms cubic-bezier 缓动
+    /// </summary>
+    public class SegmentedControl : Control
+    {
+        private string[] _items = new string[0];
+        private int _selectedIndex = 0;
+        private int _hoverIndex = -1;
+        private float _animIndex = 0f;
+        private float _animStartIndex = 0f;
+        private float _animProgress = 1f;
+        private System.Windows.Forms.Timer _animTimer;
+
+        public string[] Items
+        {
+            get { return _items; }
+            set
+            {
+                _items = value ?? new string[0];
+                if (_selectedIndex >= _items.Length) _selectedIndex = 0;
+                _animIndex = _selectedIndex;
+                this.Invalidate();
+            }
+        }
+
+        public Action<Graphics, Rectangle, Color>[] IconPainters { get; set; }
+        public bool IsDarkTheme { get; set; }
+        public Color? ActivePillColor { get; set; }
+
+        public int SelectedIndex
+        {
+            get { return _selectedIndex; }
+            set
+            {
+                if (_items == null || _items.Length == 0) return;
+                int clamped = Math.Max(0, Math.Min(_items.Length - 1, value));
+                if (_selectedIndex != clamped)
+                {
+                    _animStartIndex = _animIndex;
+                    _selectedIndex = clamped;
+                    _animProgress = 0f;
+                    StartSlideAnim();
+                    if (SelectedIndexChanged != null) SelectedIndexChanged(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        public event EventHandler SelectedIndexChanged;
+
+        public SegmentedControl()
+        {
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw |
+                          ControlStyles.SupportsTransparentBackColor |
+                          ControlStyles.Selectable, true);
+            this.BackColor = Color.Transparent;
+            this.Cursor = Cursors.Hand;
+            this.TabStop = true;
+            this.Font = WarmTheme.CreateFont(9F, FontStyle.Regular);
+
+            this.MouseMove += (s, e) =>
+            {
+                int prev = _hoverIndex;
+                _hoverIndex = HitItem(e.X);
+                if (prev != _hoverIndex) this.Invalidate();
+            };
+            this.MouseLeave += (s, e) => { _hoverIndex = -1; this.Invalidate(); };
+            this.MouseDown += (s, e) =>
+            {
+                if (e.Button != MouseButtons.Left) return;
+                int idx = HitItem(e.X);
+                if (idx >= 0) SelectedIndex = idx;
+            };
+            this.GotFocus += (s, e) => this.Invalidate();
+            this.LostFocus += (s, e) => this.Invalidate();
+        }
+
+        private int HitItem(int x)
+        {
+            if (_items == null || _items.Length == 0 || this.Width <= 4) return -1;
+            int innerW = this.Width - 4;
+            float segW = (float)innerW / _items.Length;
+            int idx = (int)((x - 2) / segW);
+            if (idx < 0 || idx >= _items.Length) return -1;
+            return idx;
+        }
+
+        private void StartSlideAnim()
+        {
+            if (_animTimer == null)
+            {
+                _animTimer = new System.Windows.Forms.Timer { Interval = 16 };
+                _animTimer.Tick += (s, e) =>
+                {
+                    _animProgress += 0.12f; // ~160ms
+                    if (_animProgress >= 1f)
+                    {
+                        _animProgress = 1f;
+                        _animIndex = _selectedIndex;
+                        _animTimer.Stop();
+                    }
+                    else
+                    {
+                        float eased = MotionHelper.EaseApple(_animProgress);
+                        _animIndex = _animStartIndex + (_selectedIndex - _animStartIndex) * eased;
+                    }
+                    this.Invalidate();
+                };
+            }
+            if (!_animTimer.Enabled) _animTimer.Start();
+        }
+
+        protected override bool IsInputKey(Keys keyData)
+        {
+            if (keyData == Keys.Left || keyData == Keys.Right) return true;
+            return base.IsInputKey(keyData);
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            if (_items == null || _items.Length == 0) return;
+            if (e.KeyCode == Keys.Right) { SelectedIndex = Math.Min(_items.Length - 1, _selectedIndex + 1); e.Handled = true; }
+            else if (e.KeyCode == Keys.Left) { SelectedIndex = Math.Max(0, _selectedIndex - 1); e.Handled = true; }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _animTimer != null) { _animTimer.Stop(); _animTimer.Dispose(); _animTimer = null; }
+            base.Dispose(disposing);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+            Rectangle trackRect = new Rectangle(2, 2, Math.Max(4, this.Width - 4), Math.Max(4, this.Height - 4));
+            if (this.Focused && this.ShowFocusCues)
+            {
+                Rectangle ring = new Rectangle(trackRect.X - 2, trackRect.Y - 2, trackRect.Width + 4, trackRect.Height + 4);
+                using (GraphicsPath rp = GlassRenderer.CreateRoundedPath(ring, 10))
+                using (Pen rpen = new Pen(WarmTheme.ApplyAlpha(WarmTheme.Orange, 0.35f), 2.5f))
+                {
+                    g.DrawPath(rpen, rp);
+                }
+            }
+
+            // 1. 凹槽底
+            Color trackBg = IsDarkTheme ? WarmTheme.SegmentedTrackDark : WarmTheme.SegmentedTrackLight;
+            using (GraphicsPath trackPath = GlassRenderer.CreateRoundedPath(trackRect, 8))
+            using (Brush tb = new SolidBrush(trackBg))
+            {
+                g.FillPath(tb, trackPath);
+            }
+
+            if (_items == null || _items.Length == 0) return;
+            float segW = (trackRect.Width - 4f) / _items.Length;
+
+            // 2. 平滑滑块 Thumb
+            RectangleF thumbF = new RectangleF(
+                trackRect.X + 2 + _animIndex * segW,
+                trackRect.Y + 2,
+                segW,
+                trackRect.Height - 4);
+            Rectangle thumbRect = Rectangle.Round(thumbF);
+            if (thumbRect.Width > 4 && thumbRect.Height > 4)
+            {
+                // 微投影
+                Rectangle sh = new Rectangle(thumbRect.X, thumbRect.Y + 1, thumbRect.Width, thumbRect.Height);
+                using (GraphicsPath sp = GlassRenderer.CreateRoundedPath(sh, 6))
+                using (Brush sb = new SolidBrush(Color.FromArgb(IsDarkTheme ? 42 : 22, 0, 0, 0)))
+                {
+                    g.FillPath(sb, sp);
+                }
+
+                Color pillCol = ActivePillColor.HasValue
+                    ? ActivePillColor.Value
+                    : (IsDarkTheme ? Color.FromArgb(58, 58, 62) : Color.White);
+                using (GraphicsPath tp = GlassRenderer.CreateRoundedPath(thumbRect, 6))
+                {
+                    using (Brush pb = new SolidBrush(pillCol)) g.FillPath(pb, tp);
+                    if (IsDarkTheme)
+                    {
+                        g.SetClip(tp);
+                        using (Pen hi = new Pen(WarmTheme.TopHighlightDark, 1))
+                            g.DrawLine(hi, thumbRect.X + 2, thumbRect.Y + 1, thumbRect.Right - 2, thumbRect.Y + 1);
+                        g.ResetClip();
+                    }
+                    else
+                    {
+                        using (Pen bdr = new Pen(Color.FromArgb(16, 0, 0, 0), 1)) g.DrawPath(bdr, tp);
+                    }
+                }
+            }
+
+            // 3. 文字与图标
+            using (Font fReg = WarmTheme.CreateFont(8.5F, FontStyle.Regular))
+            using (Font fBold = WarmTheme.CreateFont(8.5F, FontStyle.Bold))
+            {
+                for (int i = 0; i < _items.Length; i++)
+                {
+                    Rectangle itemRect = Rectangle.Round(new RectangleF(
+                        trackRect.X + 2 + i * segW,
+                        trackRect.Y + 2,
+                        segW,
+                        trackRect.Height - 4));
+                    bool isSel = (i == _selectedIndex);
+                    bool isHover = (i == _hoverIndex && !isSel);
+
+                    Color txtCol;
+                    if (isSel)
+                    {
+                        txtCol = ActivePillColor.HasValue
+                            ? Color.White
+                            : (IsDarkTheme ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary);
+                    }
+                    else if (isHover)
+                    {
+                        txtCol = IsDarkTheme ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+                    }
+                    else
+                    {
+                        txtCol = IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+                    }
+
+                    bool hasIcon = (IconPainters != null && i < IconPainters.Length && IconPainters[i] != null);
+                    Font drawFont = isSel ? fBold : fReg;
+                    if (hasIcon)
+                    {
+                        int iconSz = 14;
+                        int gap = 4;
+                        Size ts = TextRenderer.MeasureText(g, _items[i], drawFont, new Size(int.MaxValue, itemRect.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                        int totW = iconSz + gap + ts.Width;
+                        int sx = itemRect.X + Math.Max(3, (itemRect.Width - totW) / 2);
+                        Rectangle ir = new Rectangle(sx, itemRect.Y + (itemRect.Height - iconSz) / 2, iconSz, iconSz);
+                        IconPainters[i](g, ir, txtCol);
+                        Rectangle tr = new Rectangle(sx + iconSz + gap, itemRect.Y, Math.Max(8, itemRect.Right - (sx + iconSz + gap)), itemRect.Height);
+                        TextRenderer.DrawText(g, _items[i], drawFont, tr, txtCol, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+                    }
+                    else
+                    {
+                        TextRenderer.DrawText(g, _items[i], drawFont, itemRect, txtCol, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+                    }
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// 紧凑型 iOS 胶囊开关（胶囊体 36×20px，开启态 #34C759，160ms 平滑拨动动画 + 焦点环）
+    /// </summary>
+    public class ToggleSwitch : Control
+    {
+        private bool _checked = false;
+        private bool _hovered = false;
+        private float _knobProgress = 0f;
+        private System.Windows.Forms.Timer _animTimer;
+
+        public bool Checked
+        {
+            get { return _checked; }
+            set
+            {
+                if (_checked != value)
+                {
+                    _checked = value;
+                    StartAnim();
+                    if (CheckedChanged != null) CheckedChanged(this, EventArgs.Empty);
+                }
+            }
+        }
+
+        public bool IsDarkTheme { get; set; }
+        public Color OnColor { get; set; }
+        public event EventHandler CheckedChanged;
+
+        public ToggleSwitch()
+        {
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw |
+                          ControlStyles.SupportsTransparentBackColor |
+                          ControlStyles.Selectable, true);
+            this.BackColor = Color.Transparent;
+            this.Cursor = Cursors.Hand;
+            this.TabStop = true;
+            this.Size = new Size(38, 22);
+            this.Font = WarmTheme.CreateFont(9F, FontStyle.Regular);
+            OnColor = WarmTheme.SwitchGreen; // #34C759
+
+            this.MouseEnter += (s, e) => { _hovered = true; this.Invalidate(); };
+            this.MouseLeave += (s, e) => { _hovered = false; this.Invalidate(); };
+            this.Click += (s, e) => { Checked = !Checked; };
+            this.GotFocus += (s, e) => this.Invalidate();
+            this.LostFocus += (s, e) => this.Invalidate();
+        }
+
+        public void SetCheckedImmediate(bool value)
+        {
+            _checked = value;
+            _knobProgress = value ? 1f : 0f;
+            if (_animTimer != null) _animTimer.Stop();
+            this.Invalidate();
+        }
+
+        private void StartAnim()
+        {
+            if (_animTimer == null)
+            {
+                _animTimer = new System.Windows.Forms.Timer { Interval = 16 };
+                _animTimer.Tick += (s, e) =>
+                {
+                    float target = _checked ? 1f : 0f;
+                    float diff = target - _knobProgress;
+                    if (Math.Abs(diff) < 0.02f)
+                    {
+                        _knobProgress = target;
+                        _animTimer.Stop();
+                    }
+                    else
+                    {
+                        _knobProgress += diff * 0.30f; // 160ms 跟手弹性收尾
+                    }
+                    this.Invalidate();
+                };
+            }
+            if (!_animTimer.Enabled) _animTimer.Start();
+        }
+
+        protected override void OnKeyUp(KeyEventArgs e)
+        {
+            base.OnKeyUp(e);
+            if (e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter)
+            {
+                Checked = !Checked;
+                e.Handled = true;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _animTimer != null) { _animTimer.Stop(); _animTimer.Dispose(); _animTimer = null; }
+            base.Dispose(disposing);
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+            // 胶囊体尺寸 36×20
+            int pillW = 36;
+            int pillH = 20;
+            int pillY = (this.Height - pillH) / 2;
+            Rectangle pillRect = new Rectangle(2, pillY, pillW, pillH);
+
+            if (this.Focused && this.ShowFocusCues)
+            {
+                Rectangle ringRect = new Rectangle(pillRect.X - 2, pillRect.Y - 2, pillRect.Width + 4, pillRect.Height + 4);
+                using (GraphicsPath rp = GlassRenderer.CreateRoundedPath(ringRect, 12))
+                using (Pen rpen = new Pen(WarmTheme.ApplyAlpha(_checked ? OnColor : WarmTheme.Orange, 0.35f), 2.5f))
+                {
+                    g.DrawPath(rpen, rp);
+                }
+            }
+
+            float p = MotionHelper.EaseApple(_knobProgress);
+            Color offBg = IsDarkTheme ? Color.FromArgb(66, 66, 70) : Color.FromArgb(212, 212, 216);
+            Color trackCol = WarmTheme.BlendColor(offBg, OnColor, p);
+            if (_hovered) trackCol = WarmTheme.BlendColor(trackCol, Color.White, IsDarkTheme ? 0.08f : 0.05f);
+
+            using (GraphicsPath pillPath = GlassRenderer.CreateRoundedPath(pillRect, pillH / 2))
+            using (Brush b = new SolidBrush(trackCol))
+            {
+                g.FillPath(b, pillPath);
+            }
+
+            // 圆形白色滑钮 16×16 带柔和微投影
+            float knobSize = 16f;
+            float knobX = pillRect.X + 2f + p * (pillW - knobSize - 4f);
+            float knobY = pillRect.Y + (pillH - knobSize) / 2f;
+
+            using (Brush shBrush = new SolidBrush(Color.FromArgb(40, 0, 0, 0)))
+            {
+                g.FillEllipse(shBrush, knobX, knobY + 1f, knobSize, knobSize);
+            }
+            g.FillEllipse(Brushes.White, knobX, knobY, knobSize, knobSize);
+
+            if (!string.IsNullOrEmpty(this.Text))
+            {
+                Color txtCol = IsDarkTheme ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+                Rectangle textRect = new Rectangle(pillRect.Right + 8, 0, Math.Max(10, this.Width - pillRect.Right - 8), this.Height);
+                TextRenderer.DrawText(g, this.Text, this.Font, textRect, txtCol, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+            }
+        }
+    }
+
+    /// <summary>
+    /// macOS 现代桌面输入框包装器（7px 圆角 + 1px 发丝边框 + 3px 外发光焦点环，消除原生 TextBox 光标切边）
+    /// </summary>
+    public class ModernTextBox : Control
+    {
+        private TextBox _tb;
+        private bool _focused = false;
+        private bool _isDark = false;
+        private bool _multiline = false;
+        private string _placeholder = "";
+
+        public override string Text
+        {
+            get { return _tb != null ? _tb.Text : ""; }
+            set { if (_tb != null) _tb.Text = value ?? ""; }
+        }
+
+        public bool IsDarkTheme
+        {
+            get { return _isDark; }
+            set { _isDark = value; ApplyColors(); }
+        }
+
+        public bool Multiline
+        {
+            get { return _multiline; }
+            set
+            {
+                _multiline = value;
+                if (_tb != null)
+                {
+                    _tb.Multiline = value;
+                    _tb.ScrollBars = value ? ScrollBars.Vertical : ScrollBars.None;
+                    LayoutInnerBox();
+                }
+            }
+        }
+
+        public string PlaceholderText
+        {
+            get { return _placeholder; }
+            set { _placeholder = value ?? ""; this.Invalidate(); }
+        }
+
+        public TextBox InnerTextBox { get { return _tb; } }
+
+        public event EventHandler InnerTextChanged;
+
+        public ModernTextBox()
+        {
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw |
+                          ControlStyles.SupportsTransparentBackColor, true);
+            this.BackColor = Color.Transparent;
+            this.Size = new Size(240, 32);
+            this.Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular);
+
+            _tb = new TextBox
+            {
+                BorderStyle = BorderStyle.None,
+                Font = this.Font
+            };
+            _tb.Enter += (s, e) => { _focused = true; this.Invalidate(); };
+            _tb.Leave += (s, e) => { _focused = false; this.Invalidate(); };
+            _tb.TextChanged += (s, e) => { this.Invalidate(); if (InnerTextChanged != null) InnerTextChanged(this, e); };
+            this.Controls.Add(_tb);
+
+            ApplyColors();
+            LayoutInnerBox();
+        }
+
+        protected override void OnFontChanged(EventArgs e)
+        {
+            base.OnFontChanged(e);
+            if (_tb != null) { _tb.Font = this.Font; LayoutInnerBox(); }
+        }
+
+        protected override void OnResize(EventArgs e)
+        {
+            base.OnResize(e);
+            LayoutInnerBox();
+        }
+
+        private void LayoutInnerBox()
+        {
+            if (_tb == null) return;
+            int padX = 10;
+            if (_multiline)
+            {
+                _tb.Location = new Point(padX, 7);
+                _tb.Size = new Size(Math.Max(20, this.Width - padX * 2), Math.Max(18, this.Height - 14));
+            }
+            else
+            {
+                int tbH = Math.Max(18, _tb.PreferredHeight);
+                _tb.Location = new Point(padX, Math.Max(4, (this.Height - tbH) / 2));
+                _tb.Width = Math.Max(20, this.Width - padX * 2);
+            }
+        }
+
+        private void ApplyColors()
+        {
+            if (_tb == null) return;
+            _tb.BackColor = _isDark ? WarmTheme.DarkSecondaryBtnBg : WarmTheme.LightCardBg;
+            _tb.ForeColor = _isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+            this.Invalidate();
+        }
+
+        public void FocusInput()
+        {
+            if (_tb != null) { _tb.Focus(); _tb.SelectAll(); }
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+
+            Rectangle boxRect = new Rectangle(2, 2, Math.Max(4, this.Width - 4), Math.Max(4, this.Height - 4));
+            Color bgCol = _isDark ? WarmTheme.DarkSecondaryBtnBg : WarmTheme.LightCardBg;
+            Color bdrCol = _focused
+                ? WarmTheme.Orange
+                : (_isDark ? WarmTheme.TopHighlightDark : WarmTheme.BorderSecondaryLight);
+
+            if (_focused)
+            {
+                Rectangle ringRect = new Rectangle(boxRect.X - 2, boxRect.Y - 2, boxRect.Width + 4, boxRect.Height + 4);
+                using (GraphicsPath rp = GlassRenderer.CreateRoundedPath(ringRect, WarmTheme.RadiusControl + 2))
+                using (Pen rpen = new Pen(WarmTheme.ApplyAlpha(WarmTheme.Orange, 0.35f), 2.5f))
+                {
+                    g.DrawPath(rpen, rp);
+                }
+            }
+
+            using (GraphicsPath bp = GlassRenderer.CreateRoundedPath(boxRect, WarmTheme.RadiusControl))
+            {
+                using (Brush b = new SolidBrush(bgCol)) g.FillPath(b, bp);
+                using (Pen p = new Pen(bdrCol, 1)) g.DrawPath(p, bp);
+            }
+        }
+    }
+
+    /// <summary>
+    /// macOS 原生感菜单渲染器（半透质感 + 1px 发丝边框 + 圆角选中项 + 右侧灰字对齐快捷键）
+    /// </summary>
+    public class ModernMenuItem : ToolStripMenuItem
+    {
+        public string ShortcutHint { get; set; }
+        public bool IsDestructive { get; set; }
+
+        public ModernMenuItem(string text, string shortcutHint, EventHandler onClick, bool isDestructive = false)
+            : base(text, null, onClick)
+        {
+            ShortcutHint = shortcutHint ?? "";
+            IsDestructive = isDestructive;
+            this.Padding = new Padding(4, 3, 4, 3);
+        }
+    }
+
+    public class ModernMenuRenderer : ToolStripProfessionalRenderer
+    {
+        private readonly bool _isDark;
+        public ModernMenuRenderer(bool isDark) { _isDark = isDark; }
+
+        protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e)
+        {
+            Color bg = _isDark ? Color.FromArgb(44, 44, 46) : Color.FromArgb(252, 252, 253);
+            e.Graphics.Clear(bg);
+        }
+
+        protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e)
+        {
+            Color bdr = _isDark ? WarmTheme.HairlineDark : Color.FromArgb(30, 0, 0, 0);
+            using (Pen p = new Pen(bdr, 1))
+            {
+                e.Graphics.DrawRectangle(p, 0, 0, e.AffectedBounds.Width - 1, e.AffectedBounds.Height - 1);
+            }
+        }
+
+        protected override void OnRenderImageMargin(ToolStripRenderEventArgs e) { }
+
+        protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)
+        {
+            Color lineCol = _isDark ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
+            int y = e.Item.Height / 2;
+            using (Pen p = new Pen(lineCol, 1))
+            {
+                e.Graphics.DrawLine(p, 8, y, e.Item.Width - 8, y);
+            }
+        }
+
+        protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e)
+        {
+            e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            if (!e.Item.Selected || !e.Item.Enabled) return;
+
+            Rectangle r = new Rectangle(4, 1, e.Item.Width - 8, e.Item.Height - 2);
+            ModernMenuItem mItem = e.Item as ModernMenuItem;
+            Color selBg = (mItem != null && mItem.IsDestructive)
+                ? Color.FromArgb(_isDark ? 55 : 28, WarmTheme.DestructiveRed)
+                : WarmTheme.Orange;
+            using (GraphicsPath path = GlassRenderer.CreateRoundedPath(r, 5))
+            using (Brush b = new SolidBrush(selBg))
+            {
+                e.Graphics.FillPath(b, path);
+            }
+        }
+
+        protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e)
+        {
+            e.Graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+            ModernMenuItem mItem = e.Item as ModernMenuItem;
+            bool selected = e.Item.Selected && e.Item.Enabled;
+            bool destructive = (mItem != null && mItem.IsDestructive);
+
+            Color txtCol;
+            if (destructive)
+                txtCol = WarmTheme.DestructiveRed;
+            else if (selected)
+                txtCol = Color.White;
+            else
+                txtCol = _isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+
+            Font f = WarmTheme.CreateFont(9F, FontStyle.Regular);
+            Rectangle textR = new Rectangle(12, 0, e.Item.Width - 62, e.Item.Height);
+            TextRenderer.DrawText(e.Graphics, e.Item.Text, f, textR, txtCol, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+
+            if (mItem != null && !string.IsNullOrEmpty(mItem.ShortcutHint))
+            {
+                Color keyCol = (selected && !destructive)
+                    ? Color.FromArgb(220, 255, 255, 255)
+                    : (_isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted);
+                using (Font kf = WarmTheme.CreateFont(8F, FontStyle.Regular))
+                {
+                    Rectangle keyR = new Rectangle(e.Item.Width - 68, 0, 56, e.Item.Height);
+                    TextRenderer.DrawText(e.Graphics, mItem.ShortcutHint, kf, keyR, keyCol, TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+                }
+            }
+            f.Dispose();
+        }
+    }
+
+    public static class ModernMenuHelper
+    {
+        public static ContextMenuStrip CreateMenu(bool isDark)
+        {
+            ContextMenuStrip cms = new ContextMenuStrip();
+            cms.ShowImageMargin = false;
+            cms.DropShadowEnabled = true;
+            cms.Renderer = new ModernMenuRenderer(isDark);
+            cms.Font = WarmTheme.CreateFont(9F, FontStyle.Regular);
+            return cms;
+        }
+
+        public static void AddItem(ContextMenuStrip cms, string text, string shortcutHint, Action onClick, bool isDestructive)
+        {
+            ModernMenuItem item = new ModernMenuItem(text, shortcutHint, (s, e) => { if (onClick != null) onClick(); }, isDestructive);
+            item.AutoSize = false;
+            item.Size = new Size(176, 28);
+            cms.Items.Add(item);
+        }
+
+        public static void AddSeparator(ContextMenuStrip cms)
+        {
+            cms.Items.Add(new ToolStripSeparator());
+        }
+    }
+
+    /// <summary>
+    /// macOS 左侧导航侧边栏（宽屏 >=480px 自动展示：#F5F5F7 / #1E1E1E 微透灰底 + 圆角胶囊高亮块 + 数量徽章）
+    /// </summary>
+    public class SidebarCategoryPanel : Panel
+    {
+        public List<string> Categories { get; private set; }
+        public Dictionary<string, int> CategoryCounts { get; private set; }
+        public string ActiveCategory { get; private set; }
+        public bool IsDarkTheme { get; set; }
+
+        public event Action<string> OnCategorySelected;
+        public event Action OnAddCategoryRequested;
+        public event Action OnDeleteCurrentCategoryRequested;
+        public event Action<string> OnRenameCategoryRequested;
+        public event Action<string> OnDeleteCategoryRequested;
+
+        private int _hoverIdx = -1;
+        private bool _hoverAdd = false;
+        private bool _hoverDel = false;
+        private int _scrollY = 0;
+
+        public SidebarCategoryPanel()
+        {
+            Categories = new List<string>();
+            CategoryCounts = new Dictionary<string, int>();
+            ActiveCategory = "全部";
+            this.Width = 152;
+            this.Cursor = Cursors.Hand;
+            this.SetStyle(ControlStyles.AllPaintingInWmPaint |
+                          ControlStyles.OptimizedDoubleBuffer |
+                          ControlStyles.UserPaint |
+                          ControlStyles.ResizeRedraw, true);
+
+            this.MouseMove += (s, e) =>
+            {
+                int prev = _hoverIdx;
+                bool pAdd = _hoverAdd, pDel = _hoverDel;
+                HitTest(e.Location, out _hoverIdx, out _hoverAdd, out _hoverDel);
+                if (prev != _hoverIdx || pAdd != _hoverAdd || pDel != _hoverDel) this.Invalidate();
+            };
+            this.MouseLeave += (s, e) => { _hoverIdx = -1; _hoverAdd = false; _hoverDel = false; this.Invalidate(); };
+            this.MouseWheel += (s, e) =>
+            {
+                _scrollY = Math.Max(0, _scrollY - (e.Delta > 0 ? 28 : -28));
+                ClampScroll();
+                this.Invalidate();
+            };
+            this.MouseDown += (s, e) =>
+            {
+                int idx; bool hAdd, hDel;
+                HitTest(e.Location, out idx, out hAdd, out hDel);
+                if (e.Button == MouseButtons.Left && hAdd) { if (OnAddCategoryRequested != null) OnAddCategoryRequested(); return; }
+                if (e.Button == MouseButtons.Left && hDel) { if (OnDeleteCurrentCategoryRequested != null) OnDeleteCurrentCategoryRequested(); return; }
+                if (idx >= 0 && idx < Categories.Count)
+                {
+                    string cat = Categories[idx];
+                    if (e.Button == MouseButtons.Left)
+                    {
+                        ActiveCategory = cat;
+                        this.Invalidate();
+                        if (OnCategorySelected != null) OnCategorySelected(cat);
+                    }
+                    else if (e.Button == MouseButtons.Right && cat != "全部")
+                    {
+                        ContextMenuStrip cms = ModernMenuHelper.CreateMenu(IsDarkTheme);
+                        ModernMenuHelper.AddItem(cms, "修改分类名称", "F2", () => { if (OnRenameCategoryRequested != null) OnRenameCategoryRequested(cat); }, false);
+                        ModernMenuHelper.AddSeparator(cms);
+                        ModernMenuHelper.AddItem(cms, "删除此分类", "Del", () => { if (OnDeleteCategoryRequested != null) OnDeleteCategoryRequested(cat); }, true);
+                        cms.Show(this, e.Location);
+                    }
+                }
+            };
+        }
+
+        public void SetData(List<string> cats, string active, Dictionary<string, int> counts)
+        {
+            Categories = new List<string> { "全部" };
+            if (cats != null) Categories.AddRange(cats);
+            ActiveCategory = active ?? "全部";
+            CategoryCounts = counts ?? new Dictionary<string, int>();
+            ClampScroll();
+            this.Invalidate();
+        }
+
+        private void ClampScroll()
+        {
+            int contentH = 26 + Categories.Count * 30;
+            int viewH = Math.Max(40, this.Height - 40);
+            int maxS = Math.Max(0, contentH - viewH);
+            if (_scrollY > maxS) _scrollY = maxS;
+            if (_scrollY < 0) _scrollY = 0;
+        }
+
+        private void HitTest(Point pt, out int hitIdx, out bool hitAdd, out bool hitDel)
+        {
+            hitIdx = -1;
+            hitAdd = false;
+            hitDel = false;
+            Rectangle addR = new Rectangle(8, this.Height - 34, (this.Width - 22) / 2, 26);
+            Rectangle delR = new Rectangle(addR.Right + 6, this.Height - 34, (this.Width - 22) / 2, 26);
+            if (addR.Contains(pt)) { hitAdd = true; return; }
+            if (delR.Contains(pt)) { hitDel = true; return; }
+
+            if (pt.Y >= 24 && pt.Y < this.Height - 40)
+            {
+                int idx = (pt.Y - 26 + _scrollY) / 30;
+                if (idx >= 0 && idx < Categories.Count) hitIdx = idx;
+            }
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            base.OnPaint(e);
+            Graphics g = e.Graphics;
+            g.SmoothingMode = SmoothingMode.AntiAlias;
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+            Color sbBg = IsDarkTheme ? WarmTheme.DarkSidebarBg : WarmTheme.LightSidebarBg;
+            Color lineCol = IsDarkTheme ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
+            g.Clear(sbBg);
+
+            // 右侧 1px 发丝线
+            using (Pen p = new Pen(lineCol, 1))
+            {
+                g.DrawLine(p, this.Width - 1, 0, this.Width - 1, this.Height);
+            }
+
+            // 分组微标
+            using (Font hf = WarmTheme.CreateFont(7.8F, FontStyle.Bold))
+            {
+                Color hdrCol = IsDarkTheme ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
+                TextRenderer.DrawText(g, "分类导览", hf, new Rectangle(12, 6, this.Width - 20, 18), hdrCol, TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+            }
+
+            // 列表项区
+            int listBottom = this.Height - 40;
+            g.SetClip(new Rectangle(0, 24, this.Width - 1, Math.Max(10, listBottom - 24)));
+
+            using (Font fReg = WarmTheme.CreateFont(9F, FontStyle.Regular))
+            using (Font fBold = WarmTheme.CreateFont(9F, FontStyle.Bold))
+            using (Font fBadge = WarmTheme.CreateFont(8F, FontStyle.Regular))
+            {
+                for (int i = 0; i < Categories.Count; i++)
+                {
+                    string cat = Categories[i];
+                    int y = 26 + i * 30 - _scrollY;
+                    if (y + 28 < 24 || y > listBottom) continue;
+
+                    bool isActive = (cat == ActiveCategory);
+                    bool isHover = (i == _hoverIdx);
+                    Rectangle itemRect = new Rectangle(8, y, this.Width - 17, 26);
+
+                    if (isActive)
+                    {
+                        Color pillCol = IsDarkTheme ? WarmTheme.DarkRowSelected : Color.FromArgb(24, WarmTheme.Orange);
+                        if (WarmTheme.Current.IsPink && !IsDarkTheme) pillCol = Color.FromArgb(26, WarmTheme.Orange);
+                        using (GraphicsPath gp = GlassRenderer.CreateRoundedPath(itemRect, WarmTheme.RadiusControl))
+                        using (Brush b = new SolidBrush(pillCol))
+                        {
+                            g.FillPath(b, gp);
+                        }
+                    }
+                    else if (isHover)
+                    {
+                        Color hCol = IsDarkTheme ? WarmTheme.GhostHoverDark : WarmTheme.GhostHoverLight;
+                        using (GraphicsPath gp = GlassRenderer.CreateRoundedPath(itemRect, WarmTheme.RadiusControl))
+                        using (Brush b = new SolidBrush(hCol))
+                        {
+                            g.FillPath(b, gp);
+                        }
+                    }
+
+                    Color txtCol = isActive
+                        ? WarmTheme.Orange
+                        : (IsDarkTheme ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary);
+                    Font drawFont = isActive ? fBold : fReg;
+
+                    int cnt = 0;
+                    CategoryCounts.TryGetValue(cat, out cnt);
+                    Rectangle badgeRect = new Rectangle(itemRect.Right - 34, itemRect.Y, 28, itemRect.Height);
+                    Color badgeCol = isActive ? WarmTheme.Orange : (IsDarkTheme ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted);
+                    TextRenderer.DrawText(g, cnt.ToString(), fBadge, badgeRect, badgeCol, TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
+
+                    Rectangle labelRect = new Rectangle(itemRect.X + 8, itemRect.Y, Math.Max(20, itemRect.Width - 40), itemRect.Height);
+                    TextRenderer.DrawText(g, cat, drawFont, labelRect, txtCol, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.SingleLine);
+                }
+            }
+            g.ResetClip();
+
+            // 底部发丝分隔与新建/删除按钮
+            using (Pen p = new Pen(lineCol, 1))
+            {
+                g.DrawLine(p, 8, this.Height - 40, this.Width - 9, this.Height - 40);
+            }
+
+            Rectangle addR = new Rectangle(8, this.Height - 34, (this.Width - 22) / 2, 26);
+            Rectangle delR = new Rectangle(addR.Right + 6, this.Height - 34, (this.Width - 22) / 2, 26);
+            Color iconCol = IsDarkTheme ? WarmTheme.DarkTextSecondary : WarmTheme.LightChipText;
+
+            GlassRenderer.DrawModernButtonSurface(g, addR, ButtonVariant.Ghost, WarmTheme.Orange, IsDarkTheme, _hoverAdd ? 1f : 0f, false, false, true, 6);
+            GlassRenderer.DrawVectorPlusIcon(g, addR, _hoverAdd ? WarmTheme.Orange : iconCol);
+
+            Color delBg = Color.FromArgb(IsDarkTheme ? 48 : 26, WarmTheme.DestructiveRed);
+            GlassRenderer.DrawModernButtonSurface(g, delR, ButtonVariant.Ghost, WarmTheme.DestructiveRed, IsDarkTheme, _hoverDel ? 1f : 0f, false, false, true, 6, delBg);
+            GlassRenderer.DrawVectorMinusIcon(g, delR, _hoverDel ? WarmTheme.DestructiveRed : iconCol);
         }
     }
 
@@ -1829,73 +3252,253 @@ namespace HuahuaHelper
     }
 
     /// <summary>
-    /// 扁平实色/幽灵独立按钮控件（用于顶栏与弹窗）
+    /// 通用 macOS × iOS 现代桌面按钮组件
+    /// 支持 4 层级 (Primary / Secondary / Ghost / Destructive)、120ms 悬停平滑插值、按压下沉、Tab 焦点外发光环、禁用降透(0.4)与定宽加载指示器
     /// </summary>
-    public class LiquidGlassButtonControl : Control
+    public class ModernButton : Control
     {
-        public bool IsHovered { get; private set; }
-        public bool IsPressed { get; private set; }
-        public bool UseLiquidGlass { get; set; }
-        public bool IsPrimaryGlass { get; set; }
+        private bool _isHovered = false;
+        private bool _isPressed = false;
+        private float _hoverProgress = 0f;
+        private bool _isLoading = false;
+        private float _spinnerAngle = 0f;
+        private System.Windows.Forms.Timer _animTimer;
+
+        public ButtonVariant Variant { get; set; }
         public bool IsDarkTheme { get; set; }
-        public Color BaseNormal { get; set; }
+        public Color AccentColor { get; set; }
+        public Color TextColor { get; set; }
+        public Color? CustomHoverBg { get; set; }
+        public Color? CustomHoverTextColor { get; set; }
+        public int CornerRadius { get; set; }
+        public int IconSize { get; set; }
+        public int IconTextGap { get; set; }
+        public Action<Graphics, Rectangle, Color> IconPainter { get; set; }
+        public DialogResult DialogResult { get; set; }
+
+        public bool IsLoading
+        {
+            get { return _isLoading; }
+            set
+            {
+                if (_isLoading != value)
+                {
+                    _isLoading = value;
+                    EnsureAnimRunning();
+                    this.Invalidate();
+                }
+            }
+        }
+
+        // 兼容属性别名（便于渐进迁移弹窗代码）
+        public bool UseLiquidGlass { get; set; }
+        public bool IsPrimaryGlass
+        {
+            get { return Variant == ButtonVariant.Primary; }
+            set { Variant = value ? ButtonVariant.Primary : ButtonVariant.Secondary; }
+        }
+        public Color BaseNormal
+        {
+            get { return AccentColor; }
+            set { if (Variant == ButtonVariant.Primary) AccentColor = value; }
+        }
         public Color BaseHover { get; set; }
         public Color BasePressed { get; set; }
         public Color BorderColor { get; set; }
-        public Color TextColor { get; set; }
-        public bool IsGearIcon { get; set; }
-        public int CornerRadius { get; set; }
+        public bool IsGearIcon
+        {
+            get { return IconPainter != null; }
+            set { if (value) IconPainter = GlassRenderer.DrawVectorGearIcon; }
+        }
 
-        public LiquidGlassButtonControl()
+        public ModernButton()
         {
             this.SetStyle(ControlStyles.AllPaintingInWmPaint |
                           ControlStyles.OptimizedDoubleBuffer |
                           ControlStyles.UserPaint |
                           ControlStyles.ResizeRedraw |
-                          ControlStyles.SupportsTransparentBackColor, true);
+                          ControlStyles.SupportsTransparentBackColor |
+                          ControlStyles.Selectable, true);
 
-            BaseNormal = WarmTheme.LightCardBg;
-            BaseHover = WarmTheme.LightSearchBg;
-            BasePressed = WarmTheme.LightDivider;
-            BorderColor = WarmTheme.LightBorder;
-            TextColor = WarmTheme.LightChipText;
-            CornerRadius = 6;
+            this.TabStop = true;
             this.BackColor = Color.Transparent;
             this.Cursor = Cursors.Hand;
+            this.Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular);
+            Variant = ButtonVariant.Secondary;
+            AccentColor = WarmTheme.Orange;
+            TextColor = WarmTheme.LightTextPrimary;
+            CornerRadius = WarmTheme.RadiusControl; // 默认桌面级 7px 圆角
+            IconSize = 15;                          // 统一 14px-16px 图标
+            IconTextGap = 6;                        // 规范图文间距 6px
+            DialogResult = DialogResult.None;
 
-            this.MouseEnter += (s, e) => { IsHovered = true; this.Invalidate(); };
-            this.MouseLeave += (s, e) => { IsHovered = false; IsPressed = false; this.Invalidate(); };
-            this.MouseDown += (s, e) => { if (e.Button == MouseButtons.Left) { IsPressed = true; this.Invalidate(); } };
-            this.MouseUp += (s, e) => { IsPressed = false; this.Invalidate(); };
+            this.MouseEnter += (s, e) => { _isHovered = true; EnsureAnimRunning(); };
+            this.MouseLeave += (s, e) => { _isHovered = false; _isPressed = false; EnsureAnimRunning(); };
+            this.MouseDown += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left && this.Enabled && !_isLoading)
+                {
+                    _isPressed = true;
+                    this.Invalidate();
+                }
+            };
+            this.MouseUp += (s, e) => { _isPressed = false; this.Invalidate(); };
+            this.GotFocus += (s, e) => this.Invalidate();
+            this.LostFocus += (s, e) => { _isPressed = false; this.Invalidate(); };
+        }
+
+        private void EnsureAnimRunning()
+        {
+            if (_animTimer == null)
+            {
+                _animTimer = new System.Windows.Forms.Timer { Interval = 16 };
+                _animTimer.Tick += (s, e) =>
+                {
+                    bool keepGoing = false;
+                    // 120ms ease-out 悬停进度插值 (16ms/frame -> ~0.14 step)
+                    float target = _isHovered ? 1f : 0f;
+                    float diff = target - _hoverProgress;
+                    if (Math.Abs(diff) > 0.02f)
+                    {
+                        _hoverProgress += diff * 0.35f;
+                        keepGoing = true;
+                    }
+                    else
+                    {
+                        _hoverProgress = target;
+                    }
+
+                    if (_isLoading)
+                    {
+                        _spinnerAngle = (_spinnerAngle + 18f) % 360f;
+                        keepGoing = true;
+                    }
+
+                    this.Invalidate();
+                    if (!keepGoing) _animTimer.Stop();
+                };
+            }
+            if (!_animTimer.Enabled) _animTimer.Start();
+        }
+
+        protected override void OnKeyDown(KeyEventArgs e)
+        {
+            base.OnKeyDown(e);
+            if ((e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter) && this.Enabled && !_isLoading)
+            {
+                _isPressed = true;
+                this.Invalidate();
+                e.Handled = true;
+            }
+        }
+
+        protected override void OnKeyUp(KeyEventArgs e)
+        {
+            base.OnKeyUp(e);
+            if ((e.KeyCode == Keys.Space || e.KeyCode == Keys.Enter) && _isPressed)
+            {
+                _isPressed = false;
+                this.Invalidate();
+                if (this.Enabled && !_isLoading) this.OnClick(EventArgs.Empty);
+                e.Handled = true;
+            }
+        }
+
+        protected override void OnClick(EventArgs e)
+        {
+            if (!this.Enabled || _isLoading) return;
+            base.OnClick(e);
+            if (DialogResult != DialogResult.None)
+            {
+                Form parent = this.FindForm();
+                if (parent != null) parent.DialogResult = DialogResult;
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _animTimer != null)
+            {
+                _animTimer.Stop();
+                _animTimer.Dispose();
+                _animTimer = null;
+            }
+            base.Dispose(disposing);
         }
 
         protected override void OnPaint(PaintEventArgs e)
         {
             base.OnPaint(e);
             Graphics g = e.Graphics;
-            Rectangle rect = new Rectangle(1, 1, this.Width - 2, this.Height - 2);
+            g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-            if (UseLiquidGlass)
+            // 预留 2px 外边距以确保 Tab 焦点外发光环完整绘制不被剪裁
+            Rectangle bodyRect = new Rectangle(2, 2, Math.Max(4, this.Width - 4), Math.Max(4, this.Height - 4));
+            bool showFocus = this.Focused && this.ShowFocusCues;
+            float easedHover = MotionHelper.EaseApple(_hoverProgress);
+
+            GlassRenderer.DrawModernButtonSurface(
+                g, bodyRect, Variant, AccentColor, IsDarkTheme,
+                easedHover, _isPressed, showFocus, this.Enabled, CornerRadius, CustomHoverBg);
+
+            Color baseFg;
+            if (Variant == ButtonVariant.Primary) baseFg = Color.White;
+            else if (Variant == ButtonVariant.Destructive) baseFg = WarmTheme.DestructiveRed;
+            else baseFg = TextColor;
+
+            Color fgColor = (CustomHoverTextColor.HasValue && _hoverProgress > 0.01f)
+                ? WarmTheme.BlendColor(baseFg, CustomHoverTextColor.Value, easedHover)
+                : baseFg;
+
+            if (!this.Enabled) fgColor = WarmTheme.ApplyAlpha(fgColor, 0.4f);
+
+            Rectangle contentRect = (_isPressed && this.Enabled && !_isLoading)
+                ? new Rectangle(bodyRect.X + 1, bodyRect.Y + 1, bodyRect.Width - 2, bodyRect.Height - 2)
+                : bodyRect;
+
+            if (_isLoading)
             {
-                Color accent = IsPrimaryGlass ? BaseNormal : BorderColor;
-                GlassRenderer.DrawLiquidGlassButton(g, rect, accent, IsPrimaryGlass, IsDarkTheme, IsHovered, IsPressed, CornerRadius);
-            }
-            else
-            {
-                GlassRenderer.DrawLiquidGlassButton(g, rect, BaseNormal, BaseHover, BorderColor, IsHovered, CornerRadius, IsPressed, BasePressed);
+                GlassRenderer.DrawVectorSpinner(g, contentRect, fgColor, _spinnerAngle);
+                return;
             }
 
-            if (IsGearIcon)
+            bool hasIcon = (IconPainter != null);
+            bool hasText = !string.IsNullOrEmpty(this.Text);
+
+            if (hasIcon && !hasText)
             {
-                GlassRenderer.DrawVectorGearIcon(g, rect, TextColor);
+                Rectangle ir = new Rectangle(
+                    contentRect.X + (contentRect.Width - IconSize) / 2,
+                    contentRect.Y + (contentRect.Height - IconSize) / 2,
+                    IconSize, IconSize);
+                IconPainter(g, ir, fgColor);
             }
-            else
+            else if (hasIcon && hasText)
             {
-                using (Font font = new Font(this.Font.FontFamily, this.Font.Size, this.Font.Style))
-                {
-                    TextRenderer.DrawText(g, this.Text, font, rect, TextColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter);
-                }
+                Size txtSize = TextRenderer.MeasureText(g, this.Text, this.Font, new Size(int.MaxValue, contentRect.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+                int totalW = IconSize + IconTextGap + txtSize.Width;
+                int startX = contentRect.X + Math.Max(4, (contentRect.Width - totalW) / 2);
+                Rectangle ir = new Rectangle(startX, contentRect.Y + (contentRect.Height - IconSize) / 2, IconSize, IconSize);
+                IconPainter(g, ir, fgColor);
+                Rectangle tr = new Rectangle(startX + IconSize + IconTextGap, contentRect.Y, Math.Max(10, contentRect.Right - (startX + IconSize + IconTextGap) - 2), contentRect.Height);
+                TextRenderer.DrawText(g, this.Text, this.Font, tr, fgColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
             }
+            else if (hasText)
+            {
+                TextRenderer.DrawText(g, this.Text, this.Font, contentRect, fgColor, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 兼容包装类：沿用新 ModernButton 渲染管线，确保弹窗迁移过渡期零断层
+    /// </summary>
+    public class LiquidGlassButtonControl : ModernButton
+    {
+        public LiquidGlassButtonControl()
+        {
+            Variant = ButtonVariant.Secondary;
+            CornerRadius = WarmTheme.RadiusControl;
         }
     }
 
@@ -1914,10 +3517,19 @@ namespace HuahuaHelper
         [DllImport("user32.dll")]
         private static extern void keybd_event(byte bVk, byte bScan, uint dwFlags, UIntPtr dwExtraInfo);
 
+        [DllImport("user32.dll")]
+        private static extern bool ReleaseCapture();
+
+        [DllImport("user32.dll")]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int Msg, int wParam, int lParam);
+
         private const byte VK_CONTROL = 0x11;
         private const byte VK_V = 0x56;
         private const byte VK_RETURN = 0x0D;
         private const uint KEYEVENTF_KEYUP = 0x0002;
+        private const int WM_NCLBUTTONDOWN = 0x00A1;
+        private const int HTCAPTION = 2;
+        private const int WM_NCHITTEST = 0x0084;
 
         private IntPtr _lastTargetHwnd = IntPtr.Zero;
         private string _lastTargetTitle = "";
@@ -1927,18 +3539,26 @@ namespace HuahuaHelper
         private GlassTopBarPanel _topBar;
         private CircleAvatarControl _picAvatar;
         private Label _lblLogo;
-        private LiquidGlassButtonControl _btnSettings; // 幽灵矢量齿轮按钮
-        private WarmCheckBox _chkTopMost;
-        private LiquidGlassButtonControl _btnAddPhrase; // 实色淘宝橙按钮
+        private ModernButton _btnSidebar;
+        private ModernButton _btnPin;
+        private ModernButton _btnSettings;
+        private ModernButton _btnWinMin;
+        private ModernButton _btnWinMax;
+        private ModernButton _btnWinClose;
+        private ModernButton _btnAddPhrase;
         private Panel _searchWrap;
         private TextBox _searchBox;
         private bool _searchFocused = false;
         private const string SearchPlaceholder = "搜话术、分类…";
         private ModeSwitchBar _modeBar;
+        private SidebarCategoryPanel _sidebarPanel;
         private CustomCategoryBar _categoryBar;
         private MiniPhraseListView _phraseList;
         private Panel _statusBar;
         private Label _lblTarget;
+        private int _compactSavedWidth = 336;
+        private bool _sidebarManualHidden = false;
+        private bool _sidebarExpanded = false;
 
         // 数据
         private AppData _data = new AppData();
@@ -1962,7 +3582,6 @@ namespace HuahuaHelper
         private readonly string _imagesDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "images");
         private readonly string _videosDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "videos");
         private Image _customBgImg = null;
-        private Color _primaryOrange = Color.FromArgb(255, 80, 0);
 
         public MainForm()
         {
@@ -1970,12 +3589,522 @@ namespace HuahuaHelper
             LoadData();
             RestoreWindowBounds();
             ApplySettings();
-            _categoryBar.SetCategories(ActiveCategories(), ActiveCat);
+            RefreshCategoryViews();
             RefreshList();
             StartTracking();
 
             this.ResizeEnd += (s, e) => SaveWindowBounds();
             this.FormClosing += (s, e) => SaveWindowBounds();
+        }
+
+        protected override CreateParams CreateParams
+        {
+            get
+            {
+                CreateParams cp = base.CreateParams;
+                // 保留任务栏最小化/还原原生交互能力
+                cp.Style |= 0x00020000; // WS_MINIMIZEBOX
+                cp.Style |= 0x00080000; // WS_SYSMENU
+                return cp;
+            }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            base.WndProc(ref m);
+            if (m.Msg == WM_NCHITTEST && this.WindowState == FormWindowState.Normal)
+            {
+                Point pt = this.PointToClient(new Point(m.LParam.ToInt32()));
+                int grip = 6;
+                bool left = pt.X <= grip;
+                bool right = pt.X >= this.ClientSize.Width - grip;
+                bool top = pt.Y <= grip;
+                bool bottom = pt.Y >= this.ClientSize.Height - grip;
+
+                if (top && left) m.Result = (IntPtr)13;       // HTTOPLEFT
+                else if (top && right) m.Result = (IntPtr)14; // HTTOPRIGHT
+                else if (bottom && left) m.Result = (IntPtr)16; // HTBOTTOMLEFT
+                else if (bottom && right) m.Result = (IntPtr)17; // HTBOTTOMRIGHT
+                else if (left) m.Result = (IntPtr)10;         // HTLEFT
+                else if (right) m.Result = (IntPtr)11;        // HTRIGHT
+                else if (top) m.Result = (IntPtr)12;          // HTTOP
+                else if (bottom) m.Result = (IntPtr)15;       // HTBOTTOM
+            }
+        }
+
+        protected override bool ProcessCmdKey(ref Message msg, Keys keyData)
+        {
+            if (keyData == (Keys.Control | Keys.F))
+            {
+                _searchBox.Focus();
+                if (_searchBox.Text == SearchPlaceholder) _searchBox.Text = "";
+                _searchBox.SelectAll();
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.N))
+            {
+                ShowAddOrEditDialog(null);
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.Oemcomma))
+            {
+                OpenSettingsDialog();
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.T))
+            {
+                ToggleTopMostState();
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.B))
+            {
+                ToggleSidebarLayout();
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.D1))
+            {
+                SwitchMode("text");
+                return true;
+            }
+            if (keyData == (Keys.Control | Keys.D2))
+            {
+                SwitchMode("video");
+                return true;
+            }
+            if (keyData == Keys.F2 && !_searchBox.Focused && ActiveCat != "全部")
+            {
+                RenameCategoryPrompt(ActiveCat);
+                return true;
+            }
+            if (keyData == Keys.Escape && _searchBox.Focused)
+            {
+                _searchBox.Text = "";
+                _phraseList.Focus();
+                return true;
+            }
+            return base.ProcessCmdKey(ref msg, keyData);
+        }
+
+        private void BeginDragWindow(Control ctl)
+        {
+            ctl.MouseDown += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    if (e.Clicks == 2)
+                    {
+                        ToggleMaximizeRestore();
+                    }
+                    else
+                    {
+                        ReleaseCapture();
+                        SendMessage(this.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+                    }
+                }
+            };
+        }
+
+        private void ToggleMaximizeRestore()
+        {
+            this.MaximizedBounds = Screen.FromHandle(this.Handle).WorkingArea;
+            if (this.WindowState == FormWindowState.Maximized)
+                this.WindowState = FormWindowState.Normal;
+            else
+                this.WindowState = FormWindowState.Maximized;
+            UpdateWindowChromeButtons();
+        }
+
+        private void ToggleTopMostState()
+        {
+            this.TopMost = !this.TopMost;
+            UpdatePinButtonAppearance();
+        }
+
+        private void ToggleSidebarLayout()
+        {
+            if (this.WindowState == FormWindowState.Maximized)
+            {
+                _sidebarManualHidden = !_sidebarManualHidden;
+                UpdateResponsiveLayout();
+                return;
+            }
+
+            if (!_sidebarExpanded)
+            {
+                _sidebarManualHidden = false;
+                if (this.Width < 460)
+                {
+                    _compactSavedWidth = this.Width;
+                    Rectangle wa = Screen.FromHandle(this.Handle).WorkingArea;
+                    int targetW = Math.Min(500, wa.Width - 20);
+                    int rightEdge = this.Right;
+                    int newLeft = Math.Max(wa.Left, Math.Min(this.Left, rightEdge - targetW));
+                    if (newLeft + targetW > wa.Right) newLeft = Math.Max(wa.Left, wa.Right - targetW);
+                    this.Bounds = new Rectangle(newLeft, this.Top, targetW, this.Height);
+                }
+                else
+                {
+                    UpdateResponsiveLayout();
+                }
+            }
+            else
+            {
+                if (this.Width >= 460 && _compactSavedWidth < 460)
+                {
+                    Rectangle wa = Screen.FromHandle(this.Handle).WorkingArea;
+                    int targetW = Math.Max(this.MinimumSize.Width, _compactSavedWidth);
+                    int newLeft = Math.Min(wa.Right - targetW, this.Right - targetW);
+                    this.Bounds = new Rectangle(Math.Max(wa.Left, newLeft), this.Top, targetW, this.Height);
+                }
+                else
+                {
+                    _sidebarManualHidden = true;
+                    UpdateResponsiveLayout();
+                }
+            }
+            SaveWindowBounds();
+        }
+
+        private void SwitchMode(string mode)
+        {
+            if (_currentMode == mode) return;
+            _modeBar.ActiveMode = mode;
+            ApplyModeChange(mode);
+        }
+
+        private void ApplyModeChange(string mode)
+        {
+            _currentMode = mode;
+            _phraseList.CurrentMode = mode;
+            if (mode == "video")
+            {
+                _btnAddPhrase.Text = "视频";
+                _btnAddPhrase.Width = 64;
+            }
+            else
+            {
+                _btnAddPhrase.Text = "词条";
+                _btnAddPhrase.Width = 64;
+            }
+            UpdateResponsiveLayout();
+            RefreshCategoryViews();
+            RefreshList();
+        }
+
+        private void RefreshCategoryViews()
+        {
+            var cats = ActiveCategories();
+            var counts = new Dictionary<string, int>(StringComparer.Ordinal);
+            int total = 0;
+            foreach (var p in _data.Phrases)
+            {
+                string t = string.IsNullOrEmpty(p.ItemType) ? "text" : p.ItemType;
+                if (t != _currentMode) continue;
+                total++;
+                string c = string.IsNullOrEmpty(p.Category) ? "未分类" : p.Category;
+                int cur;
+                counts.TryGetValue(c, out cur);
+                counts[c] = cur + 1;
+            }
+            counts["全部"] = total;
+
+            _categoryBar.SetCategories(cats, ActiveCat);
+            _sidebarPanel.SetData(cats, ActiveCat, counts);
+        }
+
+        private bool IsDarkModeActive()
+        {
+            return (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+        }
+
+        /// <summary>
+        /// 统一现代无边框弹窗底座（DWM 原生圆角 + 1px 发丝边框 + 可拖拽标题栏 + ESC 退出）
+        /// </summary>
+        private void PrepareModernDialog(Form dlg, string title, int clientW, int clientH, out Panel titleBar, out ModernButton closeBtn)
+        {
+            bool isDark = IsDarkModeActive();
+            Color bg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            Color bdr = isDark ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
+            Color txt = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
+
+            dlg.Text = title;
+            dlg.FormBorderStyle = FormBorderStyle.None;
+            dlg.StartPosition = FormStartPosition.CenterParent;
+            dlg.ClientSize = new Size(clientW, clientH);
+            dlg.BackColor = bg;
+            dlg.ForeColor = txt;
+            dlg.Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular);
+            dlg.KeyPreview = true;
+            if (this.Icon != null) dlg.Icon = this.Icon;
+
+            dlg.Paint += (s, e) =>
+            {
+                using (Pen p = new Pen(isDark ? Color.FromArgb(62, 62, 66) : Color.FromArgb(208, 205, 200), 1))
+                {
+                    e.Graphics.DrawRectangle(p, 0, 0, dlg.ClientSize.Width - 1, dlg.ClientSize.Height - 1);
+                }
+            };
+
+            Panel hdr = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 38,
+                BackColor = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg
+            };
+            hdr.Paint += (s, e) =>
+            {
+                using (Pen p = new Pen(bdr, 1))
+                {
+                    e.Graphics.DrawLine(p, 0, hdr.Height - 1, hdr.Width, hdr.Height - 1);
+                }
+            };
+
+            Label lblTitle = new Label
+            {
+                Text = title,
+                Location = new Point(14, 9),
+                AutoSize = true,
+                Font = WarmTheme.CreateFont(10F, FontStyle.Bold),
+                ForeColor = txt,
+                BackColor = Color.Transparent
+            };
+
+            ModernButton btnX = new ModernButton
+            {
+                Size = new Size(28, 26),
+                Location = new Point(clientW - 34, 6),
+                Variant = ButtonVariant.Ghost,
+                IsDarkTheme = isDark,
+                CornerRadius = 6,
+                IconSize = 12,
+                TextColor = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary,
+                CustomHoverBg = WarmTheme.DestructiveRed,
+                CustomHoverTextColor = Color.White,
+                IconPainter = GlassRenderer.DrawVectorWinCloseIcon,
+                TabStop = false
+            };
+            btnX.Click += (s, e) => { dlg.DialogResult = DialogResult.Cancel; dlg.Close(); };
+
+            MouseEventHandler drag = (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left)
+                {
+                    ReleaseCapture();
+                    SendMessage(dlg.Handle, WM_NCLBUTTONDOWN, HTCAPTION, 0);
+                }
+            };
+            hdr.MouseDown += drag;
+            lblTitle.MouseDown += drag;
+
+            hdr.Controls.AddRange(new Control[] { lblTitle, btnX });
+            dlg.Controls.Add(hdr);
+
+            dlg.Load += (s, e) => Win32WindowStyler.ApplyModernWindowStyle(dlg, isDark);
+            dlg.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Escape)
+                {
+                    dlg.DialogResult = DialogResult.Cancel;
+                    dlg.Close();
+                }
+            };
+
+            titleBar = hdr;
+            closeBtn = btnX;
+        }
+
+        private bool ShowModernConfirm(string title, string message, bool isDestructive, string confirmText = "确认")
+        {
+            bool isDark = IsDarkModeActive();
+            Color txtSec = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+
+            using (Form dlg = new Form())
+            {
+                Panel hdr; ModernButton xBtn;
+                PrepareModernDialog(dlg, title, 368, 194, out hdr, out xBtn);
+
+                Label lblMsg = new Label
+                {
+                    Text = message,
+                    Location = new Point(20, 52),
+                    MaximumSize = new Size(328, 0),
+                    AutoSize = true,
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular),
+                    ForeColor = txtSec
+                };
+
+                ModernButton btnConfirm = new ModernButton
+                {
+                    Text = confirmText,
+                    Size = new Size(88, WarmTheme.BtnHeightDialog),
+                    Variant = isDestructive ? ButtonVariant.Destructive : ButtonVariant.Primary,
+                    IsDarkTheme = isDark,
+                    AccentColor = WarmTheme.Orange,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
+                    DialogResult = DialogResult.OK
+                };
+                if (isDestructive)
+                {
+                    btnConfirm.CustomHoverBg = Color.FromArgb(isDark ? 65 : 36, WarmTheme.DestructiveRed);
+                }
+
+                ModernButton btnCancel = new ModernButton
+                {
+                    Text = "取消",
+                    Size = new Size(76, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    DialogResult = DialogResult.Cancel
+                };
+
+                dlg.Controls.AddRange(new Control[] { lblMsg, btnConfirm, btnCancel });
+                dlg.Load += (s, e) =>
+                {
+                    int bodyBottom = Math.Max(110, lblMsg.Bottom + 18);
+                    btnCancel.Location = new Point(dlg.ClientSize.Width - btnCancel.Width - 16, bodyBottom);
+                    btnConfirm.Location = new Point(btnCancel.Left - btnConfirm.Width - 8, bodyBottom);
+                    dlg.ClientSize = new Size(368, btnCancel.Bottom + 14);
+                    xBtn.Left = dlg.ClientSize.Width - 34;
+                };
+                dlg.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Enter)
+                    {
+                        dlg.DialogResult = DialogResult.OK;
+                        dlg.Close();
+                    }
+                };
+
+                return dlg.ShowDialog(this) == DialogResult.OK;
+            }
+        }
+
+        private void ShowModernAlert(string title, string message)
+        {
+            bool isDark = IsDarkModeActive();
+            Color txtSec = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
+
+            using (Form dlg = new Form())
+            {
+                Panel hdr; ModernButton xBtn;
+                PrepareModernDialog(dlg, title, 368, 190, out hdr, out xBtn);
+
+                Label lblMsg = new Label
+                {
+                    Text = message,
+                    Location = new Point(20, 52),
+                    MaximumSize = new Size(328, 0),
+                    AutoSize = true,
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular),
+                    ForeColor = txtSec
+                };
+
+                ModernButton btnOk = new ModernButton
+                {
+                    Text = "知道了",
+                    Size = new Size(92, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Primary,
+                    IsDarkTheme = isDark,
+                    AccentColor = WarmTheme.Orange,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
+                    DialogResult = DialogResult.OK
+                };
+
+                dlg.Controls.AddRange(new Control[] { lblMsg, btnOk });
+                dlg.Load += (s, e) =>
+                {
+                    int bodyBottom = Math.Max(108, lblMsg.Bottom + 18);
+                    btnOk.Location = new Point(dlg.ClientSize.Width - btnOk.Width - 16, bodyBottom);
+                    dlg.ClientSize = new Size(368, btnOk.Bottom + 14);
+                    xBtn.Left = dlg.ClientSize.Width - 34;
+                };
+                dlg.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Enter)
+                    {
+                        dlg.DialogResult = DialogResult.OK;
+                        dlg.Close();
+                    }
+                };
+                dlg.ShowDialog(this);
+            }
+        }
+
+        /// <summary>
+        /// 就近弹出全部分类悬浮浮层 (Popover)
+        /// </summary>
+        private void ShowCategoryPopover(Point screenPos)
+        {
+            bool isDark = IsDarkModeActive();
+            Color bg = isDark ? WarmTheme.DarkElevatedBg : WarmTheme.LightCardBg;
+            Color bdr = isDark ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight;
+
+            Form pop = new Form();
+            pop.FormBorderStyle = FormBorderStyle.None;
+            pop.ShowInTaskbar = false;
+            pop.StartPosition = FormStartPosition.Manual;
+            pop.BackColor = bg;
+            pop.TopMost = true;
+            pop.KeyPreview = true;
+
+            var cats = new List<string> { "全部" };
+            cats.AddRange(ActiveCategories());
+
+            int colW = 104;
+            int cols = 2;
+            int rows = (int)Math.Ceiling(cats.Count / (double)cols);
+            int popW = Math.Max(228, cols * colW + 20);
+            int popH = Math.Min(320, rows * 32 + 18);
+
+            Rectangle wa = Screen.FromPoint(screenPos).WorkingArea;
+            int px = Math.Max(wa.Left + 8, Math.Min(screenPos.X - popW + 24, wa.Right - popW - 8));
+            int py = Math.Min(screenPos.Y + 4, wa.Bottom - popH - 8);
+            pop.Bounds = new Rectangle(px, py, popW, popH);
+
+            pop.Paint += (s, e) =>
+            {
+                using (Pen p = new Pen(bdr, 1))
+                    e.Graphics.DrawRectangle(p, 0, 0, pop.Width - 1, pop.Height - 1);
+            };
+            pop.Load += (s, e) => Win32WindowStyler.ApplyModernWindowStyle(pop, isDark);
+
+            for (int i = 0; i < cats.Count; i++)
+            {
+                string catName = cats[i];
+                int r = i / cols;
+                int c = i % cols;
+                bool active = (catName == ActiveCat);
+
+                ModernButton btn = new ModernButton
+                {
+                    Text = catName,
+                    Location = new Point(10 + c * colW, 10 + r * 32),
+                    Size = new Size(colW - 6, 28),
+                    Variant = active ? ButtonVariant.Primary : ButtonVariant.Ghost,
+                    IsDarkTheme = isDark,
+                    AccentColor = WarmTheme.Orange,
+                    TextColor = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary,
+                    CornerRadius = WarmTheme.RadiusControl,
+                    Font = WarmTheme.CreateFont(9F, active ? FontStyle.Bold : FontStyle.Regular)
+                };
+                btn.Click += (s, e) =>
+                {
+                    ActiveCat = catName;
+                    RefreshCategoryViews();
+                    RefreshList();
+                    pop.Close();
+                };
+                pop.Controls.Add(btn);
+            }
+
+            pop.KeyDown += (s, e) => { if (e.KeyCode == Keys.Escape) pop.Close(); };
+            pop.Deactivate += (s, e) => pop.Close();
+            pop.FormClosed += (s, e) => pop.Dispose();
+            pop.Show(this);
         }
 
         private static bool ContainsInvalidPathChars(string path)
@@ -2121,18 +4250,73 @@ namespace HuahuaHelper
             }
         }
 
+        private void UpdatePinButtonAppearance()
+        {
+            if (_btnPin == null) return;
+            bool isDark = IsDarkModeActive();
+            _btnPin.IsDarkTheme = isDark;
+            _btnPin.TextColor = this.TopMost
+                ? WarmTheme.Orange
+                : (isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary);
+            _btnPin.CustomHoverBg = this.TopMost
+                ? WarmTheme.ApplyAlpha(WarmTheme.Orange, isDark ? 0.22f : 0.12f)
+                : (Color?)null;
+            _btnPin.Invalidate();
+        }
+
+        private void UpdateWindowChromeButtons()
+        {
+            if (_btnWinMax == null) return;
+            bool isMax = (this.WindowState == FormWindowState.Maximized);
+            _btnWinMax.IconPainter = (g, r, col) => GlassRenderer.DrawVectorWinMaximizeIcon(g, r, col, isMax);
+            _btnWinMax.Invalidate();
+        }
+
+        private void UpdateResponsiveLayout()
+        {
+            int w = this.ClientSize.Width;
+            if (w <= 0) return;
+
+            bool showSidebar = (w >= 460 && !_sidebarManualHidden);
+            _sidebarExpanded = showSidebar;
+            _sidebarPanel.Visible = showSidebar;
+            _categoryBar.Visible = !showSidebar;
+
+            // 第一行：右上角 Windows 控制三键 [—] [□] [×] + 分割 + [侧栏] [置顶] [设置]
+            int btnY = 6;
+            _btnWinClose.Location = new Point(w - 32, btnY);
+            _btnWinMax.Location = new Point(_btnWinClose.Left - 26, btnY);
+            _btnWinMin.Location = new Point(_btnWinMax.Left - 26, btnY);
+
+            int rightToolX = _btnWinMin.Left - 10;
+            _btnSettings.Location = new Point(rightToolX - 26, btnY);
+            _btnPin.Location = new Point(_btnSettings.Left - 26, btnY);
+            _btnSidebar.Location = new Point(_btnPin.Left - 26, btnY);
+
+            // 第二行：搜索框 + 主操作按钮 [+ 词条 / 视频]
+            _btnAddPhrase.Location = new Point(w - _btnAddPhrase.Width - 10, 38);
+            _searchWrap.Location = new Point(10, 37);
+            _searchWrap.Size = new Size(Math.Max(90, _btnAddPhrase.Left - 16), 32);
+            _searchBox.Width = Math.Max(40, _searchWrap.Width - 36);
+
+            _topBar.Invalidate();
+            _phraseList.Invalidate();
+        }
+
         private void InitializeUi()
         {
             this.Text = "客服花花";
-            this.Size = new Size(320, 680);
-            this.MinimumSize = new Size(292, 400);
+            this.FormBorderStyle = FormBorderStyle.None;
+            this.SetStyle(ControlStyles.ResizeRedraw, true);
+            this.Size = new Size(336, 680);
+            this.MinimumSize = new Size(292, 420);
             this.StartPosition = FormStartPosition.Manual;
 
             Rectangle workArea = Screen.PrimaryScreen.WorkingArea;
-            this.Location = new Point(workArea.Right - 335, (workArea.Height - 680) / 2);
+            this.Location = new Point(workArea.Right - 350, (workArea.Height - 680) / 2);
             this.TopMost = true;
             this.BackColor = WarmTheme.LightPaperBg;
-            this.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular, GraphicsUnit.Point);
+            this.Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular);
 
             EmbeddedAssets.EnsureIcon(_iconPath);
             if (File.Exists(_iconPath))
@@ -2140,135 +4324,194 @@ namespace HuahuaHelper
                 try { this.Icon = new Icon(_iconPath); } catch { }
             }
 
-            // 1. 顶部 Header（OnPaintBackground 绘制分层液态玻璃，子控件透明继承零黑框）
+            // 1. 一体化无边框融合顶栏（上行标题工具栏 + 下行搜索主按钮，总高 74px）
             _topBar = new GlassTopBarPanel
             {
                 Dock = DockStyle.Top,
-                Height = 72,
-                Padding = new Padding(12, 6, 12, 6)
+                Height = 74,
+                Padding = new Padding(10, 6, 10, 4)
+            };
+            _topBar.Paint += (s, e) =>
+            {
+                // 绘制全局工具按钮与 Windows 控制三键之间的 1px 细腻分割线
+                if (_btnWinMin == null) return;
+                bool isDark = IsDarkModeActive();
+                Color lineCol = isDark ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
+                int divX = _btnWinMin.Left - 5;
+                using (Pen p = new Pen(lineCol, 1))
+                {
+                    e.Graphics.DrawLine(p, divX, 12, divX, 26);
+                }
             };
 
-            // 头像彩蛋（圆形裁剪，彻底告别灰底方框）
             _picAvatar = new CircleAvatarControl
             {
-                Size = new Size(24, 24),
+                Size = new Size(22, 22),
                 Location = new Point(12, 8),
                 AvatarImage = EmbeddedAssets.GetAvatarImage(_avatarPath)
             };
             ToolTip tip = new ToolTip();
-            tip.SetToolTip(_picAvatar, "点一点，看花花的原画");
+            tip.SetToolTip(_picAvatar, "点击查看客服花花原画");
             _picAvatar.Click += (s, e) => ShowEasterEggDialog();
 
             _lblLogo = new Label
             {
                 Text = "客服花花",
-                Font = new Font("Microsoft YaHei UI", 10.5F, FontStyle.Bold),
+                Font = WarmTheme.CreateFont(10F, FontStyle.Bold),
                 ForeColor = WarmTheme.LightTextPrimary,
                 BackColor = Color.Transparent,
-                Location = new Point(40, 9),
+                Location = new Point(38, 9),
                 Padding = new Padding(0),
                 Margin = new Padding(0),
                 AutoSize = true
             };
 
-            // 【设置】iOS 26 Liquid Glass 矢量齿轮按钮
-            _btnSettings = new LiquidGlassButtonControl
+            BeginDragWindow(_topBar);
+            BeginDragWindow(_lblLogo);
+
+            // Windows 窗口控制三键（整齐保留在右上角）
+            _btnWinClose = new ModernButton
             {
-                Size = new Size(28, 24),
-                IsGearIcon = true,
-                UseLiquidGlass = true,
-                IsPrimaryGlass = false,
+                Size = new Size(26, 26),
+                Variant = ButtonVariant.Ghost,
                 CornerRadius = 6,
-                BaseNormal = Color.Transparent,
-                BaseHover = WarmTheme.LightSearchBg,
-                BasePressed = WarmTheme.LightDivider,
-                BorderColor = WarmTheme.LightBorder,
-                TextColor = WarmTheme.LightChipText
+                IconSize = 12,
+                CustomHoverBg = WarmTheme.DestructiveRed,
+                CustomHoverTextColor = Color.White,
+                IconPainter = GlassRenderer.DrawVectorWinCloseIcon,
+                TabStop = false
             };
-            tip.SetToolTip(_btnSettings, "设置");
+            tip.SetToolTip(_btnWinClose, "关闭");
+            _btnWinClose.Click += (s, e) => this.Close();
+
+            _btnWinMax = new ModernButton
+            {
+                Size = new Size(26, 26),
+                Variant = ButtonVariant.Ghost,
+                CornerRadius = 6,
+                IconSize = 12,
+                IconPainter = (g, r, c) => GlassRenderer.DrawVectorWinMaximizeIcon(g, r, c, false),
+                TabStop = false
+            };
+            tip.SetToolTip(_btnWinMax, "最大化 / 还原");
+            _btnWinMax.Click += (s, e) => ToggleMaximizeRestore();
+
+            _btnWinMin = new ModernButton
+            {
+                Size = new Size(26, 26),
+                Variant = ButtonVariant.Ghost,
+                CornerRadius = 6,
+                IconSize = 12,
+                IconPainter = GlassRenderer.DrawVectorWinMinimizeIcon,
+                TabStop = false
+            };
+            tip.SetToolTip(_btnWinMin, "最小化");
+            _btnWinMin.Click += (s, e) => this.WindowState = FormWindowState.Minimized;
+
+            // 全局高频工具按钮（带快捷键提示）
+            _btnSettings = new ModernButton
+            {
+                Size = new Size(26, 26),
+                Variant = ButtonVariant.Ghost,
+                CornerRadius = 6,
+                IconSize = 15,
+                IconPainter = GlassRenderer.DrawVectorGearIcon
+            };
+            tip.SetToolTip(_btnSettings, "设置  Ctrl+,");
             _btnSettings.Click += (s, e) => OpenSettingsDialog();
 
-            _chkTopMost = new WarmCheckBox
+            _btnPin = new ModernButton
             {
-                Text = "置顶",
-                Checked = true,
-                Size = new Size(48, 22),
-                Font = new Font("Microsoft YaHei UI", 8.5F)
+                Size = new Size(26, 26),
+                Variant = ButtonVariant.Ghost,
+                CornerRadius = 6,
+                IconSize = 14,
+                IconPainter = (g, r, c) => GlassRenderer.DrawVectorPinIcon(g, r, c, this.TopMost)
             };
-            _chkTopMost.CheckedChanged += (s, e) => this.TopMost = _chkTopMost.Checked;
+            tip.SetToolTip(_btnPin, "窗口置顶  Ctrl+T");
+            _btnPin.Click += (s, e) => ToggleTopMostState();
 
-            // 【+词】iOS 26 Liquid Glass 主按钮
-            _btnAddPhrase = new LiquidGlassButtonControl
+            _btnSidebar = new ModernButton
             {
-                Text = "+词",
-                Size = new Size(44, 24),
-                Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-                UseLiquidGlass = true,
-                IsPrimaryGlass = true,
-                BaseNormal = WarmTheme.Orange,
-                BaseHover = WarmTheme.OrangeHover,
-                BasePressed = WarmTheme.OrangePressed,
-                BorderColor = WarmTheme.Orange,
-                TextColor = Color.White,
-                CornerRadius = 6
+                Size = new Size(26, 26),
+                Variant = ButtonVariant.Ghost,
+                CornerRadius = 6,
+                IconSize = 14,
+                IconPainter = GlassRenderer.DrawVectorSidebarIcon
             };
+            tip.SetToolTip(_btnSidebar, "展开/收起分类侧边栏  Ctrl+B");
+            _btnSidebar.Click += (s, e) => ToggleSidebarLayout();
+
+            // 主操作按钮 [+ 词条] / [+ 视频]
+            _btnAddPhrase = new ModernButton
+            {
+                Text = "词条",
+                Size = new Size(64, 30),
+                Font = WarmTheme.CreateFont(9F, FontStyle.Bold),
+                Variant = ButtonVariant.Primary,
+                AccentColor = WarmTheme.Orange,
+                CornerRadius = WarmTheme.RadiusControl,
+                IconSize = 12,
+                IconTextGap = 4,
+                IconPainter = GlassRenderer.DrawVectorPlusIcon
+            };
+            tip.SetToolTip(_btnAddPhrase, "新建条目  Ctrl+N");
             _btnAddPhrase.Click += (s, e) => ShowAddOrEditDialog(null);
 
-            // 第二行：自绘圆角搜索框（底色 #F5F1EA，16x16 矢量放大镜，2px 焦点环）
+            // 第二行：Raycast 风格圆角搜索框（7px 圆角 + 1px 发丝框 + 3px 外发光焦点环）
             _searchWrap = new Panel
             {
-                Location = new Point(12, 38),
-                Size = new Size(280, 26),
-                BackColor = Color.Transparent
+                Location = new Point(10, 37),
+                Size = new Size(210, 32),
+                BackColor = Color.Transparent,
+                Cursor = Cursors.IBeam
             };
             _searchWrap.Paint += (s, e) =>
             {
                 Graphics g = e.Graphics;
                 g.SmoothingMode = SmoothingMode.AntiAlias;
-                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
-                Color bgCol = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightSearchBg;
+                bool isDark = IsDarkModeActive();
+                Color bgCol = isDark ? WarmTheme.DarkSecondaryBtnBg : WarmTheme.LightCardBg;
                 Color iconCol = isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
+                Color bdrCol = _searchFocused
+                    ? WarmTheme.Orange
+                    : (isDark ? WarmTheme.TopHighlightDark : WarmTheme.BorderSecondaryLight);
 
-                Rectangle boxRect = new Rectangle(1, 1, _searchWrap.Width - 3, _searchWrap.Height - 3);
-                using (GraphicsPath path = GlassRenderer.CreateRoundedPath(boxRect, 6))
-                using (Brush b = new SolidBrush(bgCol))
-                {
-                    g.FillPath(b, path);
-                }
-
+                Rectangle boxRect = new Rectangle(2, 2, Math.Max(4, _searchWrap.Width - 4), Math.Max(4, _searchWrap.Height - 4));
                 if (_searchFocused)
                 {
-                    using (GraphicsPath fPath = GlassRenderer.CreateRoundedPath(boxRect, 6))
-                    using (Pen fPen = new Pen(WarmTheme.FocusRing, 2))
+                    Rectangle ringRect = new Rectangle(boxRect.X - 2, boxRect.Y - 2, boxRect.Width + 4, boxRect.Height + 4);
+                    using (GraphicsPath fPath = GlassRenderer.CreateRoundedPath(ringRect, WarmTheme.RadiusControl + 2))
+                    using (Pen fPen = new Pen(WarmTheme.ApplyAlpha(WarmTheme.Orange, 0.35f), 2.5f))
                     {
                         g.DrawPath(fPen, fPath);
                     }
                 }
-                else if (isDark)
+
+                using (GraphicsPath path = GlassRenderer.CreateRoundedPath(boxRect, WarmTheme.RadiusControl))
                 {
-                    using (GraphicsPath bPath = GlassRenderer.CreateRoundedPath(boxRect, 6))
-                    using (Pen bPen = new Pen(WarmTheme.DarkDivider, 1))
-                    {
-                        g.DrawPath(bPen, bPath);
-                    }
+                    using (Brush b = new SolidBrush(bgCol)) g.FillPath(b, path);
+                    using (Pen bPen = new Pen(bdrCol, 1)) g.DrawPath(bPen, path);
                 }
 
-                GlassRenderer.DrawVectorSearchIcon(g, new Rectangle(6, 5, 16, 16), iconCol);
+                GlassRenderer.DrawVectorSearchIcon(g, new Rectangle(8, (boxRect.Height - 14) / 2 + 2, 14, 14), iconCol);
             };
+            _searchWrap.Click += (s, e) => _searchBox.Focus();
 
             _searchBox = new TextBox
             {
-                Location = new Point(26, 5),
-                Size = new Size(246, 18),
+                Location = new Point(28, 7),
+                Size = new Size(170, 18),
                 BorderStyle = BorderStyle.None,
-                BackColor = WarmTheme.LightSearchBg,
-                Font = new Font("Microsoft YaHei UI", 9F),
+                BackColor = WarmTheme.LightCardBg,
+                Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular),
                 ForeColor = WarmTheme.LightTextMuted,
                 Text = SearchPlaceholder
             };
-            _searchBox.Enter += (s, e) => {
+            _searchBox.Enter += (s, e) =>
+            {
                 _searchFocused = true;
-                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                bool isDark = IsDarkModeActive();
                 if (_searchBox.Text == SearchPlaceholder)
                 {
                     _searchBox.Text = "";
@@ -2276,9 +4519,10 @@ namespace HuahuaHelper
                 }
                 _searchWrap.Invalidate();
             };
-            _searchBox.Leave += (s, e) => {
+            _searchBox.Leave += (s, e) =>
+            {
                 _searchFocused = false;
-                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                bool isDark = IsDarkModeActive();
                 if (string.IsNullOrWhiteSpace(_searchBox.Text))
                 {
                     _searchBox.Text = SearchPlaceholder;
@@ -2286,31 +4530,58 @@ namespace HuahuaHelper
                 }
                 _searchWrap.Invalidate();
             };
+            _searchBox.KeyDown += (s, e) =>
+            {
+                if (e.KeyCode == Keys.Down)
+                {
+                    _phraseList.SelectFirstRow();
+                    e.Handled = true;
+                }
+            };
             _searchBox.TextChanged += (s, e) => RefreshList();
             _searchWrap.Controls.Add(_searchBox);
 
-            _topBar.Controls.AddRange(new Control[] { _picAvatar, _lblLogo, _btnSettings, _chkTopMost, _btnAddPhrase, _searchWrap });
+            _topBar.Controls.AddRange(new Control[]
+            {
+                _picAvatar, _lblLogo,
+                _btnSidebar, _btnPin, _btnSettings, _btnWinMin, _btnWinMax, _btnWinClose,
+                _searchWrap, _btnAddPhrase
+            });
 
-            // 2. 模式切换栏（文本 / 视频）
+            // 2. 分段控制切换条（文本 | 视频 + 数量）
             _modeBar = new ModeSwitchBar
             {
                 Dock = DockStyle.Top,
-                Height = 34
+                Height = 36
             };
 
-            // 3. 分类导航条
+            // 3. 窄屏横排分类导航条
             _categoryBar = new CustomCategoryBar
             {
                 Dock = DockStyle.Top,
-                Height = 40
+                Height = 36
             };
-            _categoryBar.OnCategorySelected += (cat) => { ActiveCat = cat; RefreshList(); };
+            _categoryBar.OnCategorySelected += (cat) => { ActiveCat = cat; RefreshCategoryViews(); RefreshList(); };
             _categoryBar.OnAddCategoryRequested += () => AddCategoryPrompt();
             _categoryBar.OnDeleteCurrentCategoryRequested += () => DeleteCurrentCategoryPrompt();
             _categoryBar.OnRenameCategoryRequested += (cat) => RenameCategoryPrompt(cat);
             _categoryBar.OnDeleteCategoryRequested += (cat) => DeleteCategory(cat);
+            _categoryBar.OnAllCategoriesPopupRequested += (screenPt) => ShowCategoryPopover(screenPt);
 
-            // 4. 工作区列表
+            // 4. macOS 宽屏左侧导航侧边栏
+            _sidebarPanel = new SidebarCategoryPanel
+            {
+                Dock = DockStyle.Left,
+                Width = 154,
+                Visible = false
+            };
+            _sidebarPanel.OnCategorySelected += (cat) => { ActiveCat = cat; RefreshCategoryViews(); RefreshList(); };
+            _sidebarPanel.OnAddCategoryRequested += () => AddCategoryPrompt();
+            _sidebarPanel.OnDeleteCurrentCategoryRequested += () => DeleteCurrentCategoryPrompt();
+            _sidebarPanel.OnRenameCategoryRequested += (cat) => RenameCategoryPrompt(cat);
+            _sidebarPanel.OnDeleteCategoryRequested += (cat) => DeleteCategory(cat);
+
+            // 5. 工作区列表
             _phraseList = new MiniPhraseListView
             {
                 Dock = DockStyle.Fill,
@@ -2319,19 +4590,38 @@ namespace HuahuaHelper
             };
             _phraseList.OnActionTriggered += (item, isSend) => SendToTarget(item, isSend);
             _phraseList.OnEditRequested += (item) => ShowAddOrEditDialog(item);
+            _phraseList.OnCopyRequested += (item) =>
+            {
+                if (item != null && !string.IsNullOrEmpty(item.Content))
+                {
+                    try { Clipboard.SetDataObject(item.Content, true); } catch { }
+                    _lblTarget.Text = "已复制正文内容到剪贴板";
+                }
+            };
+            _phraseList.OnDeleteRequested += (item) =>
+            {
+                if (item == null) return;
+                if (ShowModernConfirm("删除条目", string.Format("确定要删除【{0}】吗？", item.Title), true, "删除"))
+                {
+                    _data.Phrases.Remove(item);
+                    SaveData();
+                    RefreshCategoryViews();
+                    RefreshList();
+                }
+            };
 
-            // 5. 底部状态栏
+            // 6. 底部精致状态栏
             _statusBar = new Panel
             {
                 Dock = DockStyle.Bottom,
-                Height = 22,
-                BackColor = WarmTheme.LightPaperBg,
+                Height = 24,
+                BackColor = WarmTheme.LightSidebarBg,
                 Padding = new Padding(12, 3, 12, 2)
             };
             _statusBar.Paint += (s, e) =>
             {
-                bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
-                Color lineCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
+                bool isDark = IsDarkModeActive();
+                Color lineCol = isDark ? WarmTheme.HairlineDark : WarmTheme.HairlineLight;
                 using (Pen p = new Pen(lineCol, 1))
                 {
                     e.Graphics.DrawLine(p, 0, 0, _statusBar.Width, 0);
@@ -2342,206 +4632,170 @@ namespace HuahuaHelper
                 Text = "目标: 请先点击千牛聊天框",
                 AutoSize = true,
                 Dock = DockStyle.Left,
-                Font = new Font("Microsoft YaHei UI", 8F),
+                Font = WarmTheme.CreateFont(8F, FontStyle.Regular),
                 ForeColor = WarmTheme.LightTextSecondary
             };
             _statusBar.Controls.Add(_lblTarget);
 
             this.Controls.Add(_phraseList);
             this.Controls.Add(_categoryBar);
+            this.Controls.Add(_sidebarPanel);
             this.Controls.Add(_modeBar);
             this.Controls.Add(_topBar);
             this.Controls.Add(_statusBar);
 
-            // 排版：左右内边距 12px，动态定位确保设置图标永不被遮挡
-            Action updateLayout = () =>
-            {
-                int w = this.ClientSize.Width;
-                _btnAddPhrase.Location = new Point(w - _btnAddPhrase.Width - 10, 8);
-                _chkTopMost.Location = new Point(_btnAddPhrase.Left - _chkTopMost.Width - 6, 11);
-                _btnSettings.Location = new Point(_chkTopMost.Left - _btnSettings.Width - 6, 8);
-                _btnSettings.BringToFront();
-                _chkTopMost.BringToFront();
-                _btnAddPhrase.BringToFront();
-                _searchWrap.Width = w - 24;
-                _searchBox.Width = Math.Max(40, _searchWrap.Width - 34);
-                _phraseList.Invalidate();
-            };
+            _modeBar.OnModeChanged += (mode) => ApplyModeChange(mode);
 
-            _modeBar.OnModeChanged += (mode) =>
+            this.Load += (s, e) =>
             {
-                _currentMode = mode;
-                _phraseList.CurrentMode = mode;
-                if (mode == "video")
-                {
-                    _btnAddPhrase.Text = "+视频";
-                    _btnAddPhrase.Width = 52;
-                }
-                else
-                {
-                    _btnAddPhrase.Text = "+词";
-                    _btnAddPhrase.Width = 44;
-                }
-                updateLayout();
-                _categoryBar.SetCategories(ActiveCategories(), ActiveCat);
-                RefreshList();
+                Win32WindowStyler.ApplyModernWindowStyle(this, IsDarkModeActive());
+                UpdateResponsiveLayout();
             };
-
-            this.Load += (s, e) => updateLayout();
-            this.Resize += (s, e) => updateLayout();
-            updateLayout();
+            this.Resize += (s, e) =>
+            {
+                UpdateResponsiveLayout();
+                UpdateWindowChromeButtons();
+            };
+            UpdateResponsiveLayout();
         }
 
         private void OpenSettingsDialog()
         {
-            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+            bool isDark = IsDarkModeActive();
             Color dlgBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
             Color cardBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
-            Color cardBorder = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+            Color cardBorder = isDark ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight;
             Color txtPrimary = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
             Color txtSec = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
 
             using (Form setDlg = new Form())
             {
-                setDlg.Text = "设置";
-                setDlg.Size = new Size(420, 760);
-                setDlg.StartPosition = FormStartPosition.CenterParent;
-                setDlg.FormBorderStyle = FormBorderStyle.FixedDialog;
-                setDlg.MaximizeBox = false;
-                setDlg.MinimizeBox = false;
-                setDlg.BackColor = dlgBg;
-                setDlg.ForeColor = txtPrimary;
-                setDlg.Font = new Font("Microsoft YaHei UI", 9F);
-                if (this.Icon != null) setDlg.Icon = this.Icon;
+                Rectangle wa = Screen.FromHandle(this.Handle).WorkingArea;
+                int idealClientH = 716;
+                int maxClientH = Math.Max(520, wa.Height - 60);
+                int clientH = Math.Min(idealClientH, maxClientH);
+
+                Panel hdr; ModernButton xBtn;
+                PrepareModernDialog(setDlg, "偏好设置", 432, clientH, out hdr, out xBtn);
+
+                // 中间可滚动容器（适配小尺寸屏幕笔记本）
+                Panel scrollHost = new Panel
+                {
+                    Location = new Point(0, hdr.Height),
+                    Size = new Size(432, clientH - hdr.Height - 58),
+                    AutoScroll = true,
+                    BackColor = dlgBg
+                };
 
                 Action<Panel> paintCard = (pnl) =>
                 {
                     pnl.Paint += (s, e) =>
                     {
-                        using (Pen p = new Pen(cardBorder, 1))
+                        e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                        Rectangle cr = new Rectangle(0, 0, pnl.Width - 1, pnl.Height - 1);
+                        using (GraphicsPath gp = GlassRenderer.CreateRoundedPath(cr, WarmTheme.RadiusCard))
                         {
-                            e.Graphics.DrawRectangle(p, 0, 0, pnl.Width - 1, pnl.Height - 1);
+                            using (Brush b = new SolidBrush(cardBg)) e.Graphics.FillPath(b, gp);
+                            using (Pen p = new Pen(cardBorder, 1)) e.Graphics.DrawPath(p, gp);
                         }
                     };
                 };
 
-                // 0. 主题配色风格卡片（暖橙纸感 / 樱粉花语）
-                Panel pnlScheme = new Panel
-                {
-                    Location = new Point(16, 12),
-                    Size = new Size(372, 82),
-                    BackColor = cardBg
-                };
-                paintCard(pnlScheme);
+                // 1. 外观与主题卡片 (11px 圆角 + 分段控制器)
+                Panel pnlAppear = new Panel { Location = new Point(16, 12), Size = new Size(394, 212), BackColor = dlgBg };
+                paintCard(pnlAppear);
 
-                Label lblSchemeTitle = new Label
+                Label lblAppearTitle = new Label
                 {
-                    Text = "主题配色",
-                    Location = new Point(14, 10),
+                    Text = "外观与主题",
+                    Location = new Point(14, 12),
                     AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-                    ForeColor = txtPrimary
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
+                    ForeColor = txtPrimary,
+                    BackColor = Color.Transparent
                 };
 
-                RadioButton rbSchemeOrange = new RadioButton { Text = "暖橙纸感", Location = new Point(16, 34), AutoSize = true, ForeColor = txtPrimary };
-                Label lblOrangeDesc = new Label { Text = "淘宝橙，干练", Location = new Point(34, 56), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
-
-                RadioButton rbSchemePink = new RadioButton { Text = "樱粉花语", Location = new Point(188, 34), AutoSize = true, ForeColor = txtPrimary };
-                Label lblPinkDesc = new Label { Text = "站点粉，柔和", Location = new Point(206, 56), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
-
-                if (_data.Settings.ColorScheme == "pink") rbSchemePink.Checked = true;
-                else rbSchemeOrange.Checked = true;
-
-                pnlScheme.Controls.AddRange(new Control[] { lblSchemeTitle, rbSchemeOrange, lblOrangeDesc, rbSchemePink, lblPinkDesc });
-
-                // 1. 界面背景主题卡片
-                Panel pnlBg = new Panel
+                Label lblSchemeSub = new Label
                 {
-                    Location = new Point(16, 104),
-                    Size = new Size(372, 158),
-                    BackColor = cardBg
-                };
-                paintCard(pnlBg);
-
-                Label lblBgTitle = new Label
-                {
-                    Text = "界面背景",
-                    Location = new Point(14, 10),
+                    Text = "配色风格",
+                    Location = new Point(14, 42),
                     AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-                    ForeColor = txtPrimary
+                    Font = WarmTheme.CreateFont(8.5F),
+                    ForeColor = txtSec,
+                    BackColor = Color.Transparent
                 };
 
-                RadioButton rbWhite = new RadioButton { Text = "经典白", Location = new Point(16, 36), AutoSize = true, ForeColor = txtPrimary };
-                Label lblWhiteDesc = new Label { Text = "清爽明亮", Location = new Point(34, 59), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
-
-                RadioButton rbBlack = new RadioButton { Text = "深色护眼", Location = new Point(188, 36), AutoSize = true, ForeColor = txtPrimary };
-                Label lblBlackDesc = new Label { Text = "晚上看不刺眼", Location = new Point(206, 59), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
-
-                RadioButton rbCustom = new RadioButton { Text = "自定义图片", Location = new Point(16, 88), AutoSize = true, ForeColor = txtPrimary };
-                Label lblCustomDesc = new Label { Text = "用自己的图做背景", Location = new Point(34, 111), AutoSize = true, Font = new Font("Microsoft YaHei UI", 8F), ForeColor = txtSec };
-
-                Panel picIconImg = new Panel { Location = new Point(120, 89), Size = new Size(16, 16), BackColor = Color.Transparent };
-                picIconImg.Paint += (s, e) => GlassRenderer.DrawVectorImageIcon(e.Graphics, new Rectangle(0, 0, 16, 16), txtSec);
-
-                string currentTheme = _data.Settings.ThemeType;
-                if (currentTheme == "black") rbBlack.Checked = true;
-                else if (currentTheme == "custom") rbCustom.Checked = true;
-                else rbWhite.Checked = true;
-
-                LiquidGlassButtonControl btnChooseBg = new LiquidGlassButtonControl
+                SegmentedControl segScheme = new SegmentedControl
                 {
-                    Text = "选择图片...",
-                    Location = new Point(188, 94),
-                    Size = new Size(86, 28),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = txtPrimary
+                    Location = new Point(84, 36),
+                    Size = new Size(294, 32),
+                    Items = new string[] { "暖橙纸感", "樱粉花语" },
+                    IsDarkTheme = isDark,
+                    SelectedIndex = (_data.Settings.ColorScheme == "pink") ? 1 : 0
                 };
-                LiquidGlassButtonControl btnClearBg = new LiquidGlassButtonControl
+
+                Label lblThemeSub = new Label
                 {
-                    Text = "一键删图",
-                    Location = new Point(280, 94),
-                    Size = new Size(76, 28),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226),
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = WarmTheme.DangerRed
+                    Text = "界面模式",
+                    Location = new Point(14, 84),
+                    AutoSize = true,
+                    Font = WarmTheme.CreateFont(8.5F),
+                    ForeColor = txtSec,
+                    BackColor = Color.Transparent
                 };
-                ToolTip clearTip = new ToolTip();
-                clearTip.SetToolTip(btnClearBg, "清除背景并一键删除本地保存的所有背景图片文件");
+
+                string curTheme = _data.Settings.ThemeType;
+                int initBgIdx = (curTheme == "black") ? 1 : (curTheme == "custom" ? 2 : 0);
+                SegmentedControl segBg = new SegmentedControl
+                {
+                    Location = new Point(84, 78),
+                    Size = new Size(294, 32),
+                    Items = new string[] { "经典白", "深色护眼", "自定义图" },
+                    IsDarkTheme = isDark,
+                    SelectedIndex = initBgIdx
+                };
 
                 string tempCustomBg = _data.Settings.CustomBgPath;
 
-                WarmCheckBox chkCopyMedia = new WarmCheckBox
+                Label lblBgPathTip = new Label
                 {
-                    Text = "复制图片和视频到软件目录",
-                    Location = new Point(14, 142),
-                    Size = new Size(260, 22),
-                    Checked = _data.Settings.CopyMediaToLocal,
+                    Text = string.IsNullOrEmpty(tempCustomBg) ? "当前未指定自定义壁纸（直接识别电脑原路径，不复制）" : ("当前背景：" + SafeGetFileName(tempCustomBg)),
+                    Location = new Point(14, 124),
+                    Size = new Size(364, 18),
+                    AutoEllipsis = true,
+                    Font = WarmTheme.CreateFont(8F),
+                    ForeColor = txtSec,
+                    BackColor = Color.Transparent
+                };
+
+                ModernButton btnChooseBg = new ModernButton
+                {
+                    Text = "选择壁纸...",
+                    Location = new Point(14, 150),
+                    Size = new Size(106, 32),
+                    Variant = ButtonVariant.Secondary,
                     IsDarkTheme = isDark,
-                    Font = new Font("Microsoft YaHei UI", 8.5F)
+                    TextColor = txtPrimary,
+                    CornerRadius = WarmTheme.RadiusControl,
+                    IconSize = 14,
+                    IconTextGap = 6,
+                    IconPainter = GlassRenderer.DrawVectorImageIcon
                 };
-                Label lblCopyDesc = new Label
+
+                ModernButton btnClearBg = new ModernButton
                 {
-                    Text = "不勾选则直接读取电脑原位置，不占空间",
-                    Location = new Point(32, 166),
-                    AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 8F),
-                    ForeColor = txtSec
+                    Text = "一键删图",
+                    Location = new Point(128, 150),
+                    Size = new Size(94, 32),
+                    Variant = ButtonVariant.Destructive,
+                    IsDarkTheme = isDark,
+                    CornerRadius = WarmTheme.RadiusControl,
+                    IconSize = 13,
+                    IconTextGap = 5,
+                    IconPainter = GlassRenderer.DrawVectorTrashIcon
                 };
-                Label lblRestoreTip = new Label
-                {
-                    Text = "提示：导入备份会让备份里面的图片和视频复制到软件目录里，会导致部分空间占用",
-                    Location = new Point(14, 186),
-                    MaximumSize = new Size(344, 0),
-                    AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 8F),
-                    ForeColor = txtSec
-                };
+                ToolTip clearTip = new ToolTip();
+                clearTip.SetToolTip(btnClearBg, "清除背景并删除软件目录下的历史背景图文件");
 
                 btnChooseBg.Click += (s, e) =>
                 {
@@ -2553,19 +4807,16 @@ namespace HuahuaHelper
                         {
                             // 自定义背景图始终直接识别原文件位置，不复制到软件目录
                             tempCustomBg = ofd.FileName;
-                            rbCustom.Checked = true;
-                            MessageBox.Show("背景图片已载入，点保存后生效。", "提示");
+                            segBg.SelectedIndex = 2;
+                            lblBgPathTip.Text = "已载入：" + SafeGetFileName(tempCustomBg);
+                            ShowModernAlert("提示", "背景图片已载入（直接引用原位置），点击「保存设置」后生效。");
                         }
                     }
                 };
 
                 btnClearBg.Click += (s, e) =>
                 {
-                    if (_customBgImg != null)
-                    {
-                        _customBgImg.Dispose();
-                        _customBgImg = null;
-                    }
+                    if (_customBgImg != null) { _customBgImg.Dispose(); _customBgImg = null; }
                     _phraseList.SetTheme("white", null);
 
                     int deletedCount = 0;
@@ -2581,111 +4832,102 @@ namespace HuahuaHelper
 
                     tempCustomBg = "";
                     _data.Settings.CustomBgPath = "";
-                    if (rbCustom.Checked) rbWhite.Checked = true;
+                    if (segBg.SelectedIndex == 2) segBg.SelectedIndex = 0;
+                    lblBgPathTip.Text = "当前未指定自定义壁纸（直接识别电脑原路径，不复制）";
 
-                    MessageBox.Show(
-                        deletedCount > 0 ? string.Format("已一键删除 {0} 张历史背景图片！", deletedCount) : "当前没有已保存的背景图片文件。",
-                        "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ShowModernAlert(
+                        "清理完成",
+                        deletedCount > 0 ? string.Format("已一键删除 {0} 张历史背景图片！", deletedCount) : "当前没有已保存的历史背景图片文件。");
                 };
 
-                pnlBg.Controls.AddRange(new Control[] { lblBgTitle, rbWhite, lblWhiteDesc, rbBlack, lblBlackDesc, rbCustom, lblCustomDesc, picIconImg, btnChooseBg, btnClearBg });
-
-                // 2. 字体大小卡片（2x2 网格防止单选框被遮挡）
-                Panel pnlFont = new Panel
+                pnlAppear.Controls.AddRange(new Control[]
                 {
-                    Location = new Point(16, 272),
-                    Size = new Size(372, 92),
-                    BackColor = cardBg
-                };
+                    lblAppearTitle, lblSchemeSub, segScheme, lblThemeSub, segBg, lblBgPathTip, btnChooseBg, btnClearBg
+                });
+
+                // 2. 话术字号卡片 (4 档滑动分段控制器)
+                Panel pnlFont = new Panel { Location = new Point(16, 234), Size = new Size(394, 86), BackColor = dlgBg };
                 paintCard(pnlFont);
 
                 Label lblFontTitle = new Label
                 {
                     Text = "话术字号",
-                    Location = new Point(14, 10),
+                    Location = new Point(14, 12),
                     AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-                    ForeColor = txtPrimary
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
+                    ForeColor = txtPrimary,
+                    BackColor = Color.Transparent
                 };
 
-                RadioButton rbF0 = new RadioButton { Text = "标准 (9pt)", Location = new Point(16, 36), AutoSize = true, ForeColor = txtPrimary };
-                RadioButton rbF1 = new RadioButton { Text = "中号 (11pt)", Location = new Point(185, 36), AutoSize = true, ForeColor = txtPrimary };
-                RadioButton rbF2 = new RadioButton { Text = "大号 (13pt)", Location = new Point(16, 62), AutoSize = true, ForeColor = txtPrimary };
-                RadioButton rbF3 = new RadioButton { Text = "特大 (15pt)", Location = new Point(185, 62), AutoSize = true, ForeColor = txtPrimary };
-
-                int curLevel = _data.Settings.FontSizeLevel;
-                if (curLevel == 1) rbF1.Checked = true;
-                else if (curLevel == 2) rbF2.Checked = true;
-                else if (curLevel == 3) rbF3.Checked = true;
-                else rbF0.Checked = true;
-
-                pnlFont.Controls.AddRange(new Control[] { lblFontTitle, rbF0, rbF1, rbF2, rbF3 });
+                SegmentedControl segFont = new SegmentedControl
+                {
+                    Location = new Point(14, 40),
+                    Size = new Size(364, 34),
+                    Items = new string[] { "标准 9pt", "中号 11pt", "大号 13pt", "特大 15pt" },
+                    IsDarkTheme = isDark,
+                    SelectedIndex = Math.Max(0, Math.Min(3, _data.Settings.FontSizeLevel))
+                };
+                pnlFont.Controls.AddRange(new Control[] { lblFontTitle, segFont });
 
                 // 3. 备份与换机卡片
-                Panel pnlBackup = new Panel
-                {
-                    Location = new Point(16, 374),
-                    Size = new Size(372, 228),
-                    BackColor = cardBg
-                };
+                Panel pnlBackup = new Panel { Location = new Point(16, 330), Size = new Size(394, 248), BackColor = dlgBg };
                 paintCard(pnlBackup);
 
-                Panel picIconBackup = new Panel { Location = new Point(14, 10), Size = new Size(16, 16), BackColor = Color.Transparent };
+                Panel picIconBackup = new Panel { Location = new Point(14, 13), Size = new Size(16, 16), BackColor = Color.Transparent };
                 picIconBackup.Paint += (s, e) => GlassRenderer.DrawVectorBackupIcon(e.Graphics, new Rectangle(0, 0, 16, 16), txtPrimary);
 
                 Label lblBackupTitle = new Label
                 {
                     Text = "备份与换机",
-                    Location = new Point(34, 10),
+                    Location = new Point(34, 12),
                     AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-                    ForeColor = txtPrimary
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
+                    ForeColor = txtPrimary,
+                    BackColor = Color.Transparent
                 };
                 Label lblBackupDesc = new Label
                 {
                     Text = "话术、图片和视频打成一个包，换电脑一键恢复",
-                    Location = new Point(14, 32),
+                    Location = new Point(14, 34),
                     AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 8F),
-                    ForeColor = txtSec
+                    Font = WarmTheme.CreateFont(8.2F),
+                    ForeColor = txtSec,
+                    BackColor = Color.Transparent
                 };
 
-                LiquidGlassButtonControl btnExport = new LiquidGlassButtonControl
+                ModernButton btnExport = new ModernButton
                 {
                     Text = "导出备份包 (.zip)",
                     Location = new Point(14, 62),
-                    Size = new Size(124, 32),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = txtPrimary
+                    Size = new Size(134, 32),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtPrimary,
+                    CornerRadius = WarmTheme.RadiusControl
                 };
                 btnExport.Click += (s, e) => ExportBackupData();
 
-                LiquidGlassButtonControl btnImport = new LiquidGlassButtonControl
+                ModernButton btnImport = new ModernButton
                 {
                     Text = "导入备份包...",
-                    Location = new Point(146, 62),
-                    Size = new Size(110, 32),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = txtPrimary
+                    Location = new Point(156, 62),
+                    Size = new Size(120, 32),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtPrimary,
+                    CornerRadius = WarmTheme.RadiusControl
                 };
                 btnImport.Click += (s, e) => ImportBackupData();
 
-                LiquidGlassButtonControl btnOpenDir = new LiquidGlassButtonControl
+                ModernButton btnOpenDir = new ModernButton
                 {
                     Text = "数据目录",
-                    Location = new Point(264, 62),
-                    Size = new Size(92, 32),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = txtSec
+                    Location = new Point(284, 62),
+                    Size = new Size(94, 32),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtSec,
+                    CornerRadius = WarmTheme.RadiusControl
                 };
                 btnOpenDir.Click += (s, e) =>
                 {
@@ -2693,35 +4935,33 @@ namespace HuahuaHelper
                     catch { }
                 };
 
-                LiquidGlassButtonControl btnClearPhrases = new LiquidGlassButtonControl
+                ModernButton btnClearPhrases = new ModernButton
                 {
                     Text = "一键清理所有提示词",
                     Location = new Point(14, 102),
-                    Size = new Size(166, 32),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226),
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = WarmTheme.DangerRed
+                    Size = new Size(178, 32),
+                    Variant = ButtonVariant.Destructive,
+                    IsDarkTheme = isDark,
+                    CornerRadius = WarmTheme.RadiusControl
                 };
                 btnClearPhrases.Click += (s, e) =>
                 {
                     int textCount = _data.Phrases.Count(p => string.IsNullOrEmpty(p.ItemType) || p.ItemType != "video");
                     if (textCount == 0)
                     {
-                        MessageBox.Show("当前没有任何文本提示词，无需清理。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ShowModernAlert("提示", "当前没有任何文本提示词，无需清理。");
                         return;
                     }
 
-                    DialogResult r1 = MessageBox.Show(
+                    if (!ShowModernConfirm(
+                        "确认清理所有提示词",
                         string.Format("确定要清理全部 {0} 条文本提示词吗？\n（分类名称与视频快捷方式将会保留，关联的附带图片将一并清理）", textCount),
-                        "确认清理所有提示词", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (r1 != DialogResult.Yes) return;
+                        true, "继续清理")) return;
 
-                    DialogResult r2 = MessageBox.Show(
+                    if (!ShowModernConfirm(
+                        "二次确认",
                         "请再次确认：清空后无法撤销，是否立即删除所有文本提示词？",
-                        "二次确认", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
-                    if (r2 != DialogResult.Yes) return;
+                        true, "确定清空")) return;
 
                     _data.Phrases.RemoveAll(p => string.IsNullOrEmpty(p.ItemType) || p.ItemType != "video");
                     try
@@ -2737,39 +4977,38 @@ namespace HuahuaHelper
                     catch { }
 
                     SaveData();
+                    RefreshCategoryViews();
                     RefreshList();
-                    MessageBox.Show("已成功清空所有文本提示词！", "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ShowModernAlert("清理完成", "已成功清空所有文本提示词！");
                 };
 
-                LiquidGlassButtonControl btnClearVideos = new LiquidGlassButtonControl
+                ModernButton btnClearVideos = new ModernButton
                 {
                     Text = "一键清理所有视频",
-                    Location = new Point(190, 102),
-                    Size = new Size(166, 32),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? Color.FromArgb(60, 28, 28) : Color.FromArgb(254, 226, 226),
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = WarmTheme.DangerRed
+                    Location = new Point(200, 102),
+                    Size = new Size(178, 32),
+                    Variant = ButtonVariant.Destructive,
+                    IsDarkTheme = isDark,
+                    CornerRadius = WarmTheme.RadiusControl
                 };
                 btnClearVideos.Click += (s, e) =>
                 {
                     int videoCount = _data.Phrases.Count(p => p.ItemType == "video");
                     if (videoCount == 0)
                     {
-                        MessageBox.Show("当前没有任何视频快捷方式，无需清理。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ShowModernAlert("提示", "当前没有任何视频快捷方式，无需清理。");
                         return;
                     }
 
-                    DialogResult r1 = MessageBox.Show(
+                    if (!ShowModernConfirm(
+                        "确认清理所有视频",
                         string.Format("确定要清理全部 {0} 条视频快捷方式吗？\n（分类名称与文本提示词将会保留，缓存视频文件将一并删除）", videoCount),
-                        "确认清理所有视频", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
-                    if (r1 != DialogResult.Yes) return;
+                        true, "继续清理")) return;
 
-                    DialogResult r2 = MessageBox.Show(
+                    if (!ShowModernConfirm(
+                        "二次确认",
                         "请再次确认：清空后无法撤销，是否立即删除所有视频快捷方式？",
-                        "二次确认", MessageBoxButtons.YesNo, MessageBoxIcon.Exclamation);
-                    if (r2 != DialogResult.Yes) return;
+                        true, "确定清空")) return;
 
                     _data.Phrases.RemoveAll(p => p.ItemType == "video");
                     try
@@ -2785,113 +5024,153 @@ namespace HuahuaHelper
                     catch { }
 
                     SaveData();
+                    RefreshCategoryViews();
                     RefreshList();
-                    MessageBox.Show("已成功清空所有视频快捷方式！", "清理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    ShowModernAlert("清理完成", "已成功清空所有视频快捷方式！");
                 };
 
-                pnlBackup.Controls.AddRange(new Control[] { picIconBackup, lblBackupTitle, lblBackupDesc, btnExport, btnImport, btnOpenDir, btnClearPhrases, btnClearVideos, chkCopyMedia, lblCopyDesc, lblRestoreTip });
+                // 紧凑型 iOS 胶囊开关（36×20px，开启态 #34C759）
+                ToggleSwitch swCopyMedia = new ToggleSwitch
+                {
+                    Text = "复制图片和视频到软件目录",
+                    Location = new Point(14, 146),
+                    Size = new Size(340, 24),
+                    IsDarkTheme = isDark,
+                    Font = WarmTheme.CreateFont(9F, FontStyle.Regular)
+                };
+                swCopyMedia.SetCheckedImmediate(_data.Settings.CopyMediaToLocal);
+
+                Label lblCopyDesc = new Label
+                {
+                    Text = "不开启则直接读取电脑原位置，不占空间",
+                    Location = new Point(58, 172),
+                    AutoSize = true,
+                    Font = WarmTheme.CreateFont(8F),
+                    ForeColor = txtSec,
+                    BackColor = Color.Transparent
+                };
+                Label lblRestoreTip = new Label
+                {
+                    Text = "提示：导入备份会让备份里面的图片和视频复制到软件目录里，会导致部分空间占用",
+                    Location = new Point(14, 194),
+                    MaximumSize = new Size(364, 0),
+                    AutoSize = true,
+                    Font = WarmTheme.CreateFont(8F),
+                    ForeColor = txtSec,
+                    BackColor = Color.Transparent
+                };
+
+                pnlBackup.Controls.AddRange(new Control[]
+                {
+                    picIconBackup, lblBackupTitle, lblBackupDesc,
+                    btnExport, btnImport, btnOpenDir, btnClearPhrases, btnClearVideos,
+                    swCopyMedia, lblCopyDesc, lblRestoreTip
+                });
 
                 // 4. 开源项目地址卡片
                 string repoUrl = "https://github.com/l1011186781-commits/kefu-huahua";
-                Panel pnlAbout = new Panel
-                {
-                    Location = new Point(16, 612),
-                    Size = new Size(372, 54),
-                    BackColor = cardBg
-                };
+                Panel pnlAbout = new Panel { Location = new Point(16, 588), Size = new Size(394, 58), BackColor = dlgBg };
                 paintCard(pnlAbout);
 
                 Label lblGitHubTitle = new Label
                 {
-                    Text = "开源项目地址（点击打开）",
-                    Location = new Point(14, 8),
+                    Text = "开源项目主页 · 客服花花 v1.3 蝶翼双飞",
+                    Location = new Point(14, 10),
                     AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 8.5F, FontStyle.Bold),
-                    ForeColor = txtPrimary
+                    Font = WarmTheme.CreateFont(8.5F, FontStyle.Bold),
+                    ForeColor = txtPrimary,
+                    BackColor = Color.Transparent
                 };
                 LinkLabel lnkGitHub = new LinkLabel
                 {
                     Text = repoUrl,
-                    Location = new Point(14, 28),
+                    Location = new Point(14, 31),
                     AutoSize = true,
-                    Font = new Font("Microsoft YaHei UI", 8.5F),
+                    Font = WarmTheme.CreateFont(8.5F),
                     LinkColor = isDark ? WarmTheme.DarkPrimaryAccent : WarmTheme.Orange,
                     ActiveLinkColor = WarmTheme.OrangePressed,
                     VisitedLinkColor = isDark ? WarmTheme.DarkPrimaryAccent : WarmTheme.Orange,
                     LinkBehavior = LinkBehavior.HoverUnderline,
-                    Cursor = Cursors.Hand
+                    Cursor = Cursors.Hand,
+                    BackColor = Color.Transparent
                 };
                 ToolTip ghTip = new ToolTip();
                 ghTip.SetToolTip(lnkGitHub, "点击在浏览器中访问项目主页");
                 lnkGitHub.LinkClicked += (s, e) =>
                 {
                     try { System.Diagnostics.Process.Start(repoUrl); }
-                    catch (Exception ex) { MessageBox.Show("无法打开浏览器: " + ex.Message, "提示"); }
+                    catch (Exception ex) { ShowModernAlert("提示", "无法打开浏览器: " + ex.Message); }
                 };
                 pnlAbout.Controls.AddRange(new Control[] { lblGitHubTitle, lnkGitHub });
 
-                LiquidGlassButtonControl btnSave = new LiquidGlassButtonControl
-                {
-                    Text = "保存",
-                    Location = new Point(216, 678),
-                    Size = new Size(88, 32),
-                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold),
-                    BaseNormal = WarmTheme.Orange,
-                    BaseHover = WarmTheme.OrangeHover,
-                    BasePressed = WarmTheme.OrangePressed,
-                    BorderColor = WarmTheme.Orange,
-                    TextColor = Color.White
-                };
-                btnSave.Click += (s, e) => { setDlg.DialogResult = DialogResult.OK; setDlg.Close(); };
+                scrollHost.Controls.AddRange(new Control[] { pnlAppear, pnlFont, pnlBackup, pnlAbout });
 
-                LiquidGlassButtonControl btnCancel = new LiquidGlassButtonControl
+                // 底部固定操作栏
+                Panel footer = new Panel
+                {
+                    Dock = DockStyle.Bottom,
+                    Height = 56,
+                    BackColor = cardBg
+                };
+                footer.Paint += (s, e) =>
+                {
+                    using (Pen p = new Pen(cardBorder, 1))
+                        e.Graphics.DrawLine(p, 0, 0, footer.Width, 0);
+                };
+
+                ModernButton btnSave = new ModernButton
+                {
+                    Text = "保存设置",
+                    Location = new Point(228, 11),
+                    Size = new Size(98, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Primary,
+                    IsDarkTheme = isDark,
+                    AccentColor = WarmTheme.Orange,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
+                    DialogResult = DialogResult.OK
+                };
+
+                ModernButton btnCancel = new ModernButton
                 {
                     Text = "取消",
-                    Location = new Point(312, 678),
-                    Size = new Size(76, 32),
-                    BaseNormal = cardBg,
-                    BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg,
-                    BasePressed = cardBorder,
-                    BorderColor = cardBorder,
-                    TextColor = txtPrimary
+                    Location = new Point(334, 11),
+                    Size = new Size(80, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtPrimary,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    DialogResult = DialogResult.Cancel
                 };
-                btnCancel.Click += (s, e) => { setDlg.DialogResult = DialogResult.Cancel; setDlg.Close(); };
+                footer.Controls.AddRange(new Control[] { btnSave, btnCancel });
 
                 setDlg.Load += (s, e) =>
                 {
-                    lblOrangeDesc.Top = rbSchemeOrange.Bottom + 2;
-                    lblPinkDesc.Top = rbSchemePink.Bottom + 2;
-                    lblWhiteDesc.Top = rbWhite.Bottom + 2;
-                    lblBlackDesc.Top = rbBlack.Bottom + 2;
-                    lblCustomDesc.Top = rbCustom.Bottom + 2;
-                    lblCopyDesc.Top = chkCopyMedia.Bottom + 2;
-                    lblRestoreTip.Top = lblCopyDesc.Bottom + 5;
-                    pnlBackup.Height = Math.Max(228, lblRestoreTip.Bottom + 12);
+                    pnlBackup.Height = Math.Max(238, lblRestoreTip.Bottom + 14);
                     pnlAbout.Top = pnlBackup.Bottom + 10;
-                    btnSave.Top = pnlAbout.Bottom + 12;
-                    btnCancel.Top = btnSave.Top;
-                    setDlg.ClientSize = new Size(404, btnSave.Bottom + 14);
-                    picIconImg.Left = rbCustom.Right + 4;
-                    picIconImg.Top = rbCustom.Top + (rbCustom.Height - picIconImg.Height) / 2;
+                    int contentBottom = pnlAbout.Bottom + 14;
+                    int wantH = hdr.Height + contentBottom + footer.Height;
+                    int finalH = Math.Min(maxClientH, wantH);
+                    setDlg.ClientSize = new Size(432, finalH);
+                    scrollHost.Size = new Size(432, finalH - hdr.Height - footer.Height);
+                    xBtn.Left = setDlg.ClientSize.Width - 34;
                 };
 
-                setDlg.Controls.AddRange(new Control[] { pnlScheme, pnlBg, pnlFont, pnlBackup, pnlAbout, btnSave, btnCancel });
+                setDlg.Controls.Add(scrollHost);
+                setDlg.Controls.Add(footer);
+                hdr.BringToFront();
 
                 if (setDlg.ShowDialog(this) == DialogResult.OK)
                 {
-                    _data.Settings.ColorScheme = rbSchemePink.Checked ? "pink" : "orange";
+                    _data.Settings.ColorScheme = (segScheme.SelectedIndex == 1) ? "pink" : "orange";
 
-                    if (rbBlack.Checked) _data.Settings.ThemeType = "black";
-                    else if (rbCustom.Checked) _data.Settings.ThemeType = "custom";
+                    if (segBg.SelectedIndex == 1) _data.Settings.ThemeType = "black";
+                    else if (segBg.SelectedIndex == 2) _data.Settings.ThemeType = "custom";
                     else _data.Settings.ThemeType = "white";
 
                     _data.Settings.CustomBgPath = tempCustomBg;
-                    _data.Settings.CopyMediaToLocal = chkCopyMedia.Checked;
-
-                    if (rbF1.Checked) _data.Settings.FontSizeLevel = 1;
-                    else if (rbF2.Checked) _data.Settings.FontSizeLevel = 2;
-                    else if (rbF3.Checked) _data.Settings.FontSizeLevel = 3;
-                    else _data.Settings.FontSizeLevel = 0;
+                    _data.Settings.CopyMediaToLocal = swCopyMedia.Checked;
+                    _data.Settings.FontSizeLevel = Math.Max(0, Math.Min(3, segFont.SelectedIndex));
 
                     SaveData();
                     ApplySettings();
@@ -2904,10 +5183,10 @@ namespace HuahuaHelper
             WarmTheme.SetScheme(_data.Settings.ColorScheme);
 
             int fLevel = _data.Settings.FontSizeLevel;
-            if (fLevel == 0) _phraseList.SetFontConfig(9.0F, 36);
-            else if (fLevel == 1) _phraseList.SetFontConfig(11.0F, 42);
-            else if (fLevel == 2) _phraseList.SetFontConfig(13.0F, 48);
-            else _phraseList.SetFontConfig(15.0F, 56);
+            if (fLevel == 0) _phraseList.SetFontConfig(9.5F, 40);
+            else if (fLevel == 1) _phraseList.SetFontConfig(10.8F, 45);
+            else if (fLevel == 2) _phraseList.SetFontConfig(12.5F, 50);
+            else _phraseList.SetFontConfig(14.5F, 56);
 
             string theme = _data.Settings.ThemeType;
             bool isDark = (theme == "black");
@@ -2916,25 +5195,25 @@ namespace HuahuaHelper
             if (theme == "custom" && !string.IsNullOrEmpty(_data.Settings.CustomBgPath))
             {
                 string fullImg = ResolveMediaPath(_data.Settings.CustomBgPath);
-                if (File.Exists(fullImg))
+                if (SafeFileExists(fullImg))
                 {
                     try { _customBgImg = Image.FromFile(fullImg); } catch { }
                 }
             }
 
             this.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            Win32WindowStyler.ApplyModernWindowStyle(this, isDark);
 
             Color textCol = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
             Color secCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
-            Color boxBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightSearchBg;
+            Color boxBg = isDark ? WarmTheme.DarkSecondaryBtnBg : WarmTheme.LightCardBg;
 
             _topBar.IsDarkTheme = isDark;
             _topBar.Invalidate();
             _picAvatar.IsDarkTheme = isDark;
             _picAvatar.Invalidate();
             _lblLogo.ForeColor = textCol;
-            _chkTopMost.IsDarkTheme = isDark;
-            _chkTopMost.Invalidate();
+
             _searchBox.BackColor = boxBg;
             if (_searchBox.Text == SearchPlaceholder)
                 _searchBox.ForeColor = isDark ? WarmTheme.DarkTextMuted : WarmTheme.LightTextMuted;
@@ -2942,22 +5221,25 @@ namespace HuahuaHelper
                 _searchBox.ForeColor = textCol;
             _searchWrap.Invalidate();
 
-            _btnSettings.IsDarkTheme = isDark;
-            _btnSettings.BaseNormal = Color.Transparent;
-            _btnSettings.BaseHover = isDark ? WarmTheme.DarkRowHover : WarmTheme.LightSearchBg;
-            _btnSettings.BasePressed = isDark ? WarmTheme.DarkDivider : WarmTheme.LightDivider;
-            _btnSettings.BorderColor = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
-            _btnSettings.TextColor = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightChipText;
-            _btnSettings.Invalidate();
+            ModernButton[] ghostToolBtns = new ModernButton[] { _btnSidebar, _btnPin, _btnSettings, _btnWinMin, _btnWinMax, _btnWinClose };
+            foreach (ModernButton b in ghostToolBtns)
+            {
+                if (b == null) continue;
+                b.IsDarkTheme = isDark;
+                b.AccentColor = WarmTheme.Orange;
+                b.TextColor = (b == _btnWinClose || b == _btnWinMax || b == _btnWinMin)
+                    ? secCol
+                    : textCol;
+                b.Invalidate();
+            }
+            UpdatePinButtonAppearance();
+            UpdateWindowChromeButtons();
 
             _btnAddPhrase.IsDarkTheme = isDark;
-            _btnAddPhrase.BaseNormal = WarmTheme.Orange;
-            _btnAddPhrase.BaseHover = WarmTheme.OrangeHover;
-            _btnAddPhrase.BasePressed = WarmTheme.OrangePressed;
-            _btnAddPhrase.BorderColor = WarmTheme.Orange;
+            _btnAddPhrase.AccentColor = WarmTheme.Orange;
             _btnAddPhrase.Invalidate();
 
-            _statusBar.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
+            _statusBar.BackColor = isDark ? WarmTheme.DarkSidebarBg : WarmTheme.LightSidebarBg;
             _statusBar.Invalidate();
             if (string.IsNullOrEmpty(_lastTargetTitle))
             {
@@ -2970,35 +5252,55 @@ namespace HuahuaHelper
             _categoryBar.IsDarkTheme = isDark;
             _categoryBar.Invalidate();
 
+            _sidebarPanel.IsDarkTheme = isDark;
+            _sidebarPanel.Invalidate();
+
             _phraseList.SetTheme(theme, _customBgImg);
         }
 
         private void RunWithBusyDialog(string message, Action work, Action onDone)
         {
-            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+            bool isDark = IsDarkModeActive();
             using (Form busyDlg = new Form())
             {
                 busyDlg.Text = "处理中";
-                busyDlg.Size = new Size(340, 110);
+                busyDlg.ClientSize = new Size(344, 108);
                 busyDlg.StartPosition = FormStartPosition.CenterParent;
-                busyDlg.FormBorderStyle = FormBorderStyle.FixedDialog;
-                busyDlg.ControlBox = false;
+                busyDlg.FormBorderStyle = FormBorderStyle.None;
                 busyDlg.ShowInTaskbar = false;
-                busyDlg.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
-                busyDlg.Font = new Font("Microsoft YaHei UI", 9F);
+                busyDlg.BackColor = isDark ? WarmTheme.DarkElevatedBg : WarmTheme.LightCardBg;
+                busyDlg.Font = WarmTheme.CreateFont(9.5F, FontStyle.Regular);
+
+                float angle = 0f;
+                System.Windows.Forms.Timer spinTimer = new System.Windows.Forms.Timer { Interval = 24 };
+                Panel spinnerBox = new Panel { Location = new Point(22, 36), Size = new Size(28, 28), BackColor = Color.Transparent };
+                spinnerBox.Paint += (s, e) =>
+                {
+                    GlassRenderer.DrawVectorSpinner(e.Graphics, new Rectangle(0, 0, 28, 28), WarmTheme.Orange, angle);
+                };
+                spinTimer.Tick += (s, e) => { angle = (angle + 18f) % 360f; spinnerBox.Invalidate(); };
 
                 Label lbl = new Label
                 {
                     Text = message,
-                    Dock = DockStyle.Fill,
-                    TextAlign = ContentAlignment.MiddleCenter,
+                    Location = new Point(58, 20),
+                    Size = new Size(266, 68),
+                    TextAlign = ContentAlignment.MiddleLeft,
                     ForeColor = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary
                 };
-                busyDlg.Controls.Add(lbl);
+
+                busyDlg.Paint += (s, e) =>
+                {
+                    using (Pen p = new Pen(isDark ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight, 1))
+                        e.Graphics.DrawRectangle(p, 0, 0, busyDlg.ClientSize.Width - 1, busyDlg.ClientSize.Height - 1);
+                };
+                busyDlg.Load += (s, e) => Win32WindowStyler.ApplyModernWindowStyle(busyDlg, isDark);
+                busyDlg.Controls.AddRange(new Control[] { spinnerBox, lbl });
 
                 Exception err = null;
                 busyDlg.Shown += (s, e) =>
                 {
+                    spinTimer.Start();
                     Task.Factory.StartNew(() =>
                     {
                         try { work(); }
@@ -3011,6 +5313,8 @@ namespace HuahuaHelper
                 };
 
                 busyDlg.ShowDialog(this);
+                spinTimer.Stop();
+                spinTimer.Dispose();
                 if (err != null) throw err;
                 if (onDone != null) onDone();
             }
@@ -3255,11 +5559,13 @@ namespace HuahuaHelper
 
                 if (ofd.ShowDialog(this) == DialogResult.OK)
                 {
-                    var confirm = MessageBox.Show(
+                    bool confirmed = ShowModernConfirm(
+                        "确认导入备份",
                         "导入备份将恢复该备份包中的所有【文本/视频分类】、【话术】、【附带图片】以及【视频文件】。\n注意：导入备份会让备份里面的图片和视频复制到软件目录里，会导致部分空间占用。\n是否确认导入？",
-                        "确认导入备份", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                        false,
+                        "确认导入");
 
-                    if (confirm != DialogResult.Yes) return;
+                    if (!confirmed) return;
 
                     string tempExtractDir = Path.Combine(Path.GetTempPath(), "HuahuaRestore_" + Guid.NewGuid().ToString("N"));
                     bool validBackup = true;
@@ -3305,7 +5611,7 @@ namespace HuahuaHelper
                         {
                             if (!validBackup)
                             {
-                                MessageBox.Show("无效的备份文件：未在该文件中检测到 phrases.json 数据！", "导入失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                                ShowModernAlert("导入失败", "无效的备份文件：未在该文件中检测到 phrases.json 数据！");
                                 return;
                             }
 
@@ -3313,19 +5619,19 @@ namespace HuahuaHelper
                             ApplySettings();
                             _currentTextCat = "全部";
                             _currentVideoCat = "全部";
-                            _categoryBar.SetCategories(ActiveCategories(), ActiveCat);
+                            RefreshCategoryViews();
                             RefreshList();
 
                             int textCnt = _data.Phrases.Count(p => string.IsNullOrEmpty(p.ItemType) || p.ItemType != "video");
                             int vidCnt = _data.Phrases.Count(p => p.ItemType == "video");
-                            MessageBox.Show(
-                                string.Format("恢复完成！\n已成功复原 {0} 条文本话术、{1} 条视频快捷方式。", textCnt, vidCnt),
-                                "恢复成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            ShowModernAlert(
+                                "恢复成功",
+                                string.Format("恢复完成！\n已成功复原 {0} 条文本话术、{1} 条视频快捷方式。", textCnt, vidCnt));
                         });
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show("恢复备份时发生异常: " + ex.Message, "恢复失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        ShowModernAlert("恢复失败", "恢复备份时发生异常: " + ex.Message);
                     }
                     finally
                     {
@@ -3340,44 +5646,36 @@ namespace HuahuaHelper
             Image eggImg = EmbeddedAssets.GetAvatarImage(_avatarPath);
             if (eggImg == null) return;
 
-            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+            bool isDark = IsDarkModeActive();
 
             using (Form eggForm = new Form())
             {
-                eggForm.Text = "客服花花 - 原画";
-                eggForm.Size = new Size(360, 420);
-                eggForm.StartPosition = FormStartPosition.CenterParent;
-                eggForm.FormBorderStyle = FormBorderStyle.FixedDialog;
-                eggForm.MaximizeBox = false;
-                eggForm.MinimizeBox = false;
-                eggForm.BackColor = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
-                if (this.Icon != null) eggForm.Icon = this.Icon;
+                Panel hdr; ModernButton xBtn;
+                PrepareModernDialog(eggForm, "客服花花 · 原画立绘", 340, 412, out hdr, out xBtn);
 
                 PictureBox pic = new PictureBox
                 {
-                    Dock = DockStyle.Top,
-                    Height = 310,
+                    Location = new Point(16, 48),
+                    Size = new Size(308, 300),
                     SizeMode = PictureBoxSizeMode.Zoom,
                     Image = eggImg,
-                    Padding = new Padding(10),
                     BackColor = Color.Transparent
                 };
 
                 Label lblText = new Label
                 {
-                    Dock = DockStyle.Fill,
-                    Text = "「正在努力帮主人回复客户呢！」\n点击任意处或按 ESC 返回",
+                    Location = new Point(16, 354),
+                    Size = new Size(308, 44),
+                    Text = "「正在努力帮主人回复客户呢！」\n点击图片或按 Esc 返回",
                     TextAlign = ContentAlignment.MiddleCenter,
-                    Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Regular),
+                    Font = WarmTheme.CreateFont(9F, FontStyle.Regular),
                     ForeColor = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary
                 };
 
-                eggForm.Controls.Add(lblText);
-                eggForm.Controls.Add(pic);
+                eggForm.Controls.AddRange(new Control[] { pic, lblText });
 
                 pic.Click += (s, e) => eggForm.Close();
                 lblText.Click += (s, e) => eggForm.Close();
-                eggForm.Click += (s, e) => eggForm.Close();
 
                 eggForm.ShowDialog(this);
             }
@@ -3401,7 +5699,7 @@ namespace HuahuaHelper
                         string shortTitle = title.Length > 14 ? title.Substring(0, 12) + ".." : title;
                         _lblTarget.Text = "目标: " + shortTitle;
                         bool isQianniu = title.Contains("千牛") || title.Contains("旺旺");
-                        bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
+                        bool isDark = IsDarkModeActive();
                         _lblTarget.ForeColor = isQianniu
                             ? (isDark ? WarmTheme.OrangeHover : WarmTheme.Orange)
                             : (isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary);
@@ -3440,7 +5738,6 @@ namespace HuahuaHelper
             List<PhraseItem> filtered;
             if (_data.Phrases.Count > 150)
             {
-                // 大数据量时启用多核并行筛选（保持原有顺序）
                 filtered = _data.Phrases.AsParallel().AsOrdered().Where(matchFunc).ToList();
             }
             else
@@ -3457,7 +5754,7 @@ namespace HuahuaHelper
         {
             if (_lastTargetHwnd == IntPtr.Zero)
             {
-                MessageBox.Show("尚未捕获聊天窗口！\n请先鼠标点一下千牛或微信输入框，然后再点发送。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowModernAlert("提示", "尚未捕获聊天窗口！\n请先鼠标点一下千牛或微信输入框，然后再点发送。");
                 return;
             }
 
@@ -3466,20 +5763,20 @@ namespace HuahuaHelper
             bool videoFileValid = false;
             if (isVideo && !string.IsNullOrEmpty(fullVideoPath))
             {
-                videoFileValid = File.Exists(fullVideoPath);
+                videoFileValid = SafeFileExists(fullVideoPath);
                 if (!videoFileValid)
                 {
-                    MessageBox.Show("找不到视频文件：\n" + fullVideoPath, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    ShowModernAlert("找不到视频", "找不到视频文件：\n" + fullVideoPath);
                     return;
                 }
             }
 
             bool hasImage = !isVideo && !string.IsNullOrEmpty(item.ImagePath);
             string fullImgPath = hasImage ? ResolveMediaPath(item.ImagePath) : "";
-            bool imgFileValid = hasImage && File.Exists(fullImgPath);
+            bool imgFileValid = hasImage && SafeFileExists(fullImgPath);
             if (hasImage && !imgFileValid)
             {
-                MessageBox.Show("找不到图片文件：\n" + fullImgPath, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                ShowModernAlert("找不到图片", "找不到图片文件：\n" + fullImgPath);
                 return;
             }
             bool hasText = !string.IsNullOrEmpty(item.Content);
@@ -3590,13 +5887,13 @@ namespace HuahuaHelper
                 var list = ActiveCategories();
                 if (list.Contains(name))
                 {
-                    MessageBox.Show("该分类已存在！", "提示");
+                    ShowModernAlert("提示", "该分类已存在！");
                     return;
                 }
                 list.Add(name);
                 ActiveCat = name;
                 SaveData();
-                _categoryBar.SetCategories(list, ActiveCat);
+                RefreshCategoryViews();
                 RefreshList();
             }
         }
@@ -3605,7 +5902,7 @@ namespace HuahuaHelper
         {
             if (ActiveCat == "全部")
             {
-                MessageBox.Show("【全部】为系统默认聚合分类，不可删除哦！\n请先点击想要删除的具体分类，然后再点击 [-] 删除。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowModernAlert("提示", "【全部】为系统默认聚合分类，不可删除。\n请先选择想要删除的具体分类，然后再点击删除。");
                 return;
             }
 
@@ -3630,14 +5927,14 @@ namespace HuahuaHelper
 
                 if (ActiveCat == oldName) ActiveCat = newName;
                 SaveData();
-                _categoryBar.SetCategories(list, ActiveCat);
+                RefreshCategoryViews();
                 RefreshList();
             }
         }
 
         private void DeleteCategory(string cat)
         {
-            if (MessageBox.Show("确定删除分类【" + cat + "】吗？\n该分类下的内容将自动归入【未分类】。", "确认删除分类", MessageBoxButtons.YesNo, MessageBoxIcon.Question) == DialogResult.Yes)
+            if (ShowModernConfirm("确认删除分类", "确定删除分类【" + cat + "】吗？\n该分类下的内容将自动归入【未分类】。", true, "删除分类"))
             {
                 var list = ActiveCategories();
                 list.Remove(cat);
@@ -3648,7 +5945,7 @@ namespace HuahuaHelper
                 }
                 ActiveCat = "全部";
                 SaveData();
-                _categoryBar.SetCategories(list, ActiveCat);
+                RefreshCategoryViews();
                 RefreshList();
             }
         }
@@ -3657,43 +5954,37 @@ namespace HuahuaHelper
         {
             bool isEditing = (editItem != null);
             bool isVideoMode = isEditing ? (editItem.ItemType == "video") : (_currentMode == "video");
-            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
-            Color dlgBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
-            Color cardBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
-            Color bdrCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+            bool isDark = IsDarkModeActive();
+            Color cardBg = isDark ? WarmTheme.DarkSecondaryBtnBg : WarmTheme.LightCardBg;
+            Color bdrCol = isDark ? WarmTheme.HairlineDark : WarmTheme.BorderSecondaryLight;
             Color txtCol = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
             Color secCol = isDark ? WarmTheme.DarkTextSecondary : WarmTheme.LightTextSecondary;
 
             using (Form dlg = new Form())
             {
-                if (isVideoMode)
-                    dlg.Text = isEditing ? "修改视频快捷方式" : "添加视频快捷方式";
-                else
-                    dlg.Text = isEditing ? "修改话术" : "添加话术";
+                string titleText = isVideoMode
+                    ? (isEditing ? "修改视频快捷方式" : "添加视频快捷方式")
+                    : (isEditing ? "修改话术" : "添加话术");
 
-                dlg.Size = new Size(424, 440);
-                dlg.StartPosition = FormStartPosition.CenterParent;
-                dlg.FormBorderStyle = FormBorderStyle.FixedDialog;
-                dlg.MaximizeBox = false;
-                dlg.MinimizeBox = false;
-                dlg.BackColor = dlgBg;
-                dlg.ForeColor = txtCol;
-                dlg.Font = new Font("Microsoft YaHei UI", 9F);
+                Panel hdr; ModernButton xBtn;
+                PrepareModernDialog(dlg, titleText, 430, 444, out hdr, out xBtn);
                 dlg.AllowDrop = true;
-                if (this.Icon != null) dlg.Icon = this.Icon;
 
-                Label lblCat = new Label { Text = "分类：", Location = new Point(16, 18), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
-                ComboBox cmbCat = new ComboBox { Location = new Point(108, 15), Width = 280, DropDownStyle = ComboBoxStyle.DropDownList, BackColor = cardBg, ForeColor = txtCol };
-                
+                Label lblCat = new Label { Text = "分类", Location = new Point(20, 56), ForeColor = secCol, AutoSize = true, Font = WarmTheme.CreateFont(9F) };
+                ComboBox cmbCat = new ComboBox
+                {
+                    Location = new Point(106, 52),
+                    Width = 300,
+                    DropDownStyle = ComboBoxStyle.DropDownList,
+                    FlatStyle = FlatStyle.Flat,
+                    BackColor = cardBg,
+                    ForeColor = txtCol,
+                    Font = WarmTheme.CreateFont(9.5F)
+                };
+
                 var dialogCats = isVideoMode ? _data.VideoCategories : _data.Categories;
-                if (dialogCats.Count == 0)
-                {
-                    cmbCat.Items.Add("未分类");
-                }
-                else
-                {
-                    foreach (var c in dialogCats) cmbCat.Items.Add(c);
-                }
+                if (dialogCats.Count == 0) cmbCat.Items.Add("未分类");
+                else foreach (var c in dialogCats) cmbCat.Items.Add(c);
 
                 if (isEditing)
                 {
@@ -3709,31 +6000,44 @@ namespace HuahuaHelper
                     cmbCat.SelectedIndex = 0;
                 }
 
-                Label lblTitle = new Label { Text = isVideoMode ? "视频名称：" : "提示词：", Location = new Point(16, 55), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
-                TextBox txtTitle = new TextBox { Location = new Point(108, 52), Width = 280, BackColor = cardBg, ForeColor = txtCol, Text = isEditing ? editItem.Title : "" };
-
-                Label lblContent = new Label { Text = isVideoMode ? "附带文字：" : "正文：", Location = new Point(16, 92), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
-                TextBox txtContent = new TextBox
+                Label lblTitle = new Label { Text = isVideoMode ? "视频名称" : "提示词", Location = new Point(20, 96), ForeColor = secCol, AutoSize = true, Font = WarmTheme.CreateFont(9F) };
+                ModernTextBox txtTitle = new ModernTextBox
                 {
-                    Location = new Point(108, 89),
-                    Width = 280,
-                    Height = 95,
+                    Location = new Point(104, 88),
+                    Size = new Size(304, 34),
+                    IsDarkTheme = isDark,
+                    Text = isEditing ? editItem.Title : ""
+                };
+
+                Label lblContent = new Label { Text = isVideoMode ? "附带文字" : "话术正文", Location = new Point(20, 138), ForeColor = secCol, AutoSize = true, Font = WarmTheme.CreateFont(9F) };
+                ModernTextBox txtContent = new ModernTextBox
+                {
+                    Location = new Point(104, 130),
+                    Size = new Size(304, 102),
                     Multiline = true,
-                    ScrollBars = ScrollBars.Vertical,
-                    BackColor = cardBg,
-                    ForeColor = txtCol,
+                    IsDarkTheme = isDark,
                     Text = isEditing ? editItem.Content : ""
                 };
 
-                Label lblImg = new Label { Text = isVideoMode ? "视频文件：" : "图片：", Location = new Point(16, 198), Padding = new Padding(0), ForeColor = txtCol, AutoSize = true };
-                
+                Label lblImg = new Label { Text = isVideoMode ? "视频文件" : "附带图片", Location = new Point(20, 248), ForeColor = secCol, AutoSize = true, Font = WarmTheme.CreateFont(9F) };
+
                 Panel pnlDropBox = new Panel
                 {
-                    Location = new Point(108, 195),
-                    Size = new Size(84, 84),
-                    BorderStyle = BorderStyle.FixedSingle,
+                    Location = new Point(106, 244),
+                    Size = new Size(92, 92),
                     BackColor = cardBg,
                     AllowDrop = true
+                };
+                pnlDropBox.Paint += (s, e) =>
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    Rectangle r = new Rectangle(1, 1, pnlDropBox.Width - 2, pnlDropBox.Height - 2);
+                    using (GraphicsPath gp = GlassRenderer.CreateRoundedPath(r, WarmTheme.RadiusControl))
+                    using (Pen pen = new Pen(bdrCol, 1))
+                    {
+                        pen.DashStyle = DashStyle.Dash;
+                        e.Graphics.DrawPath(pen, gp);
+                    }
                 };
 
                 PictureBox picPreview = new PictureBox
@@ -3742,17 +6046,18 @@ namespace HuahuaHelper
                     SizeMode = PictureBoxSizeMode.Zoom,
                     BackColor = Color.Transparent,
                     AllowDrop = true,
-                    Visible = false
+                    Visible = false,
+                    Padding = new Padding(4)
                 };
                 pnlDropBox.Controls.Add(picPreview);
 
                 Label lblDropHint = new Label
                 {
-                    Text = isVideoMode ? "将视频文件\n拖入此处" : "直接将图片\n拖入此处",
+                    Text = isVideoMode ? "将视频\n拖入此处" : "将图片\n拖入此处",
                     Dock = DockStyle.Fill,
                     TextAlign = ContentAlignment.MiddleCenter,
-                    Font = new Font("Microsoft YaHei UI", 8F),
-                    ForeColor = Color.FromArgb(140, 145, 155),
+                    Font = WarmTheme.CreateFont(8.5F),
+                    ForeColor = secCol,
                     Visible = true
                 };
                 pnlDropBox.Controls.Add(lblDropHint);
@@ -3781,15 +6086,15 @@ namespace HuahuaHelper
                                 return;
                             }
                         }
-                        lblDropHint.Text = "将视频文件\n拖入此处";
-                        lblDropHint.ForeColor = Color.FromArgb(140, 145, 155);
+                        lblDropHint.Text = "将视频\n拖入此处";
+                        lblDropHint.ForeColor = secCol;
                         return;
                     }
 
                     if (!string.IsNullOrEmpty(currentSelectedImgPath))
                     {
                         string fullP = ResolveMediaPath(currentSelectedImgPath);
-                        if (File.Exists(fullP))
+                        if (SafeFileExists(fullP))
                         {
                             try
                             {
@@ -3827,7 +6132,7 @@ namespace HuahuaHelper
                     if (files != null && files.Length > 0)
                     {
                         string file = files[0];
-                        string ext = Path.GetExtension(file).ToLower();
+                        string ext = SafeGetExtension(file).ToLower();
                         if (isVideoMode)
                         {
                             if (ext == ".mp4" || ext == ".mov" || ext == ".avi" || ext == ".mkv" || ext == ".wmv" || ext == ".flv" || ext == ".webm")
@@ -3839,12 +6144,12 @@ namespace HuahuaHelper
                                 }
                                 catch (Exception ex)
                                 {
-                                    MessageBox.Show("导入视频失败: " + ex.Message, "提示");
+                                    ShowModernAlert("导入视频失败", ex.Message);
                                 }
                             }
                             else
                             {
-                                MessageBox.Show("请拖入视频文件（支持 mp4 / mov / avi / mkv / wmv / flv / webm）。", "提示");
+                                ShowModernAlert("格式提示", "请拖入视频文件（支持 mp4 / mov / avi / mkv / wmv / flv / webm）。");
                             }
                         }
                         else if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp" || ext == ".webp")
@@ -3856,7 +6161,7 @@ namespace HuahuaHelper
                             }
                             catch (Exception ex)
                             {
-                                MessageBox.Show("导入拖入图片失败: " + ex.Message, "提示");
+                                ShowModernAlert("导入图片失败", ex.Message);
                             }
                         }
                     }
@@ -3872,45 +6177,44 @@ namespace HuahuaHelper
                 lblDropHint.DragEnter += handleDragEnter;
                 lblDropHint.DragDrop += handleDragDrop;
 
-                Button btnUploadImg = new Button
+                ModernButton btnUploadImg = new ModernButton
                 {
                     Text = isVideoMode ? "选择视频" : "本地选择",
-                    Location = new Point(202, 195),
-                    Size = new Size(80, 28),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = cardBg,
-                    ForeColor = txtCol
+                    Location = new Point(210, 244),
+                    Size = new Size(92, 32),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtCol,
+                    CornerRadius = WarmTheme.RadiusControl,
+                    IconSize = 14,
+                    IconTextGap = 6,
+                    IconPainter = isVideoMode ? (Action<Graphics, Rectangle, Color>)GlassRenderer.DrawVectorVideoIcon : GlassRenderer.DrawVectorImageIcon
                 };
-                btnUploadImg.FlatAppearance.BorderColor = bdrCol;
 
-                Button btnPasteImg = new Button
+                ModernButton btnPasteImg = new ModernButton
                 {
-                    Text = "  粘贴图片",
-                    Location = new Point(290, 195),
-                    Size = new Size(92, 28),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = cardBg,
-                    ForeColor = txtCol,
-                    TextAlign = ContentAlignment.MiddleRight,
-                    Padding = new Padding(0, 0, 6, 0),
+                    Text = "粘贴图片",
+                    Location = new Point(308, 244),
+                    Size = new Size(98, 32),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtCol,
+                    CornerRadius = WarmTheme.RadiusControl,
+                    IconSize = 14,
+                    IconTextGap = 6,
+                    IconPainter = GlassRenderer.DrawVectorClipboardIcon,
                     Visible = !isVideoMode
                 };
-                btnPasteImg.FlatAppearance.BorderColor = bdrCol;
-                btnPasteImg.Paint += (s, e) =>
-                {
-                    GlassRenderer.DrawVectorClipboardIcon(e.Graphics, new Rectangle(6, 6, 16, 16), secCol);
-                };
 
-                Button btnClearImg = new Button
+                ModernButton btnClearImg = new ModernButton
                 {
                     Text = isVideoMode ? "清除视频" : "清除图片",
-                    Location = new Point(202, 232),
-                    Size = new Size(80, 28),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = cardBg,
-                    ForeColor = WarmTheme.DangerRed
+                    Location = new Point(210, 282),
+                    Size = new Size(92, 32),
+                    Variant = ButtonVariant.Destructive,
+                    IsDarkTheme = isDark,
+                    CornerRadius = WarmTheme.RadiusControl
                 };
-                btnClearImg.FlatAppearance.BorderColor = bdrCol;
 
                 btnUploadImg.Click += (s, e) =>
                 {
@@ -3927,10 +6231,7 @@ namespace HuahuaHelper
                                     currentSelectedVideoPath = ImportMediaFile(ofd.FileName, true);
                                     updatePreview();
                                 }
-                                catch (Exception ex)
-                                {
-                                    MessageBox.Show("加载视频失败: " + ex.Message, "提示");
-                                }
+                                catch (Exception ex) { ShowModernAlert("加载视频失败", ex.Message); }
                             }
                         }
                         else
@@ -3944,10 +6245,7 @@ namespace HuahuaHelper
                                     currentSelectedImgPath = ImportMediaFile(ofd.FileName, false);
                                     updatePreview();
                                 }
-                                catch (Exception ex)
-                                {
-                                    MessageBox.Show("加载图片失败: " + ex.Message, "提示");
-                                }
+                                catch (Exception ex) { ShowModernAlert("加载图片失败", ex.Message); }
                             }
                         }
                     }
@@ -3982,7 +6280,7 @@ namespace HuahuaHelper
                                 string[] files = (string[])iData.GetData(DataFormats.FileDrop);
                                 if (files != null && files.Length > 0)
                                 {
-                                    string ext = Path.GetExtension(files[0]).ToLower();
+                                    string ext = SafeGetExtension(files[0]).ToLower();
                                     if (ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".bmp" || ext == ".webp")
                                     {
                                         currentSelectedImgPath = ImportMediaFile(files[0], false);
@@ -4013,7 +6311,7 @@ namespace HuahuaHelper
 
                     if (!recognized)
                     {
-                        MessageBox.Show("未能在剪贴板中检测到图片！\n您也可以直接将图片拖进左侧方框中。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        ShowModernAlert("提示", "未能在剪贴板中检测到图片！\n您也可以直接将图片拖进左侧方框中。");
                     }
                 };
 
@@ -4024,63 +6322,71 @@ namespace HuahuaHelper
                     updatePreview();
                 };
 
-                Button btnSave = new Button
+                // 底部发丝分割 + 主次确认按钮（高度 34px，圆角 9px）
+                Panel footDiv = new Panel { Location = new Point(20, 356), Size = new Size(390, 1), BackColor = bdrCol };
+
+                ModernButton btnSave = new ModernButton
                 {
                     Text = isVideoMode ? "保存视频" : "保存话术",
-                    Location = new Point(226, 345),
-                    Size = new Size(82, 32),
-                    BackColor = WarmTheme.Orange,
-                    ForeColor = Color.White,
-                    FlatStyle = FlatStyle.Flat,
+                    Location = new Point(228, 372),
+                    Size = new Size(94, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Primary,
+                    IsDarkTheme = isDark,
+                    AccentColor = WarmTheme.Orange,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
                     DialogResult = DialogResult.OK
                 };
-                btnSave.FlatAppearance.BorderSize = 0;
 
-                Button btnCancel = new Button
+                ModernButton btnCancel = new ModernButton
                 {
                     Text = "取消",
-                    Location = new Point(316, 345),
-                    Size = new Size(72, 32),
-                    FlatStyle = FlatStyle.Flat,
-                    BackColor = cardBg,
-                    ForeColor = txtCol,
+                    Location = new Point(330, 372),
+                    Size = new Size(76, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtCol,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
                     DialogResult = DialogResult.Cancel
                 };
-                btnCancel.FlatAppearance.BorderColor = bdrCol;
 
                 dlg.Load += (s, e) =>
                 {
                     int maxR = Math.Max(Math.Max(lblCat.Right, lblTitle.Right), Math.Max(lblContent.Right, lblImg.Right));
-                    int inputX = Math.Max(108, maxR + 8);
-                    int rightEdge = dlg.ClientSize.Width - 18;
-                    int fieldW = Math.Max(180, rightEdge - inputX);
+                    int inputX = Math.Max(94, maxR + 12);
+                    int rightEdge = dlg.ClientSize.Width - 20;
+                    int fieldW = Math.Max(190, rightEdge - inputX);
 
-                    cmbCat.Left = inputX; cmbCat.Width = fieldW;
+                    cmbCat.Left = inputX + 2; cmbCat.Width = fieldW - 4;
                     txtTitle.Left = inputX; txtTitle.Width = fieldW;
                     txtContent.Left = inputX; txtContent.Width = fieldW;
-                    pnlDropBox.Left = inputX;
+                    pnlDropBox.Left = inputX + 2;
                     btnUploadImg.Left = pnlDropBox.Right + 10;
-                    btnPasteImg.Left = btnUploadImg.Right + 8;
+                    btnPasteImg.Left = btnUploadImg.Right + 6;
                     btnClearImg.Left = pnlDropBox.Right + 10;
+                    footDiv.Location = new Point(20, 356);
+                    footDiv.Width = dlg.ClientSize.Width - 40;
                     btnCancel.Left = rightEdge - btnCancel.Width;
                     btnSave.Left = btnCancel.Left - btnSave.Width - 8;
                 };
 
                 if (isEditing)
                 {
-                    Button btnDel = new Button
+                    ModernButton btnDel = new ModernButton
                     {
                         Text = "删除",
-                        Location = new Point(16, 345),
-                        Size = new Size(60, 32),
-                        FlatStyle = FlatStyle.Flat,
-                        BackColor = cardBg,
-                        ForeColor = WarmTheme.DangerRed
+                        Location = new Point(20, 372),
+                        Size = new Size(76, WarmTheme.BtnHeightDialog),
+                        Variant = ButtonVariant.Destructive,
+                        IsDarkTheme = isDark,
+                        CornerRadius = WarmTheme.RadiusDialogBtn,
+                        IconSize = 13,
+                        IconTextGap = 5,
+                        IconPainter = GlassRenderer.DrawVectorTrashIcon
                     };
-                    btnDel.FlatAppearance.BorderColor = bdrCol;
                     btnDel.Click += (s, e) =>
                     {
-                        if (MessageBox.Show("确定删除此话术？", "提示", MessageBoxButtons.YesNo) == DialogResult.Yes)
+                        if (ShowModernConfirm("删除条目", string.Format("确定永久删除【{0}】吗？", editItem.Title), true, "删除"))
                         {
                             _data.Phrases.Remove(editItem);
                             SaveData();
@@ -4094,7 +6400,7 @@ namespace HuahuaHelper
                 dlg.Controls.AddRange(new Control[] {
                     lblCat, cmbCat, lblTitle, txtTitle, lblContent, txtContent,
                     lblImg, pnlDropBox, btnUploadImg, btnPasteImg, btnClearImg,
-                    btnSave, btnCancel
+                    footDiv, btnSave, btnCancel
                 });
 
                 var res = dlg.ShowDialog(this);
@@ -4102,20 +6408,20 @@ namespace HuahuaHelper
                 {
                     if (string.IsNullOrWhiteSpace(txtTitle.Text))
                     {
-                        MessageBox.Show(isVideoMode ? "视频名称不能为空！" : "提示词不能为空！", "提示");
+                        ShowModernAlert("提示", isVideoMode ? "视频名称不能为空！" : "提示词不能为空！");
                         return;
                     }
                     if (isVideoMode)
                     {
                         if (string.IsNullOrEmpty(currentSelectedVideoPath))
                         {
-                            MessageBox.Show("请先选择或拖入一个视频文件！", "提示");
+                            ShowModernAlert("提示", "请先选择或拖入一个视频文件！");
                             return;
                         }
                     }
                     else if (string.IsNullOrWhiteSpace(txtContent.Text) && string.IsNullOrEmpty(currentSelectedImgPath))
                     {
-                        MessageBox.Show("话术正文和附带图片至少需要填写一项！", "提示");
+                        ShowModernAlert("提示", "话术正文和附带图片至少需要填写一项！");
                         return;
                     }
 
@@ -4142,10 +6448,12 @@ namespace HuahuaHelper
                     }
 
                     SaveData();
+                    RefreshCategoryViews();
                     RefreshList();
                 }
                 else if (res == DialogResult.Abort)
                 {
+                    RefreshCategoryViews();
                     RefreshList();
                 }
             }
@@ -4153,34 +6461,57 @@ namespace HuahuaHelper
 
         private string PromptInput(string title, string promptText, string defaultValue)
         {
-            bool isDark = (_data != null && _data.Settings != null && _data.Settings.ThemeType == "black");
-            Color dlgBg = isDark ? WarmTheme.DarkPaperBg : WarmTheme.LightPaperBg;
-            Color cardBg = isDark ? WarmTheme.DarkCardBg : WarmTheme.LightCardBg;
-            Color bdrCol = isDark ? WarmTheme.DarkDivider : WarmTheme.LightBorder;
+            bool isDark = IsDarkModeActive();
             Color txtCol = isDark ? WarmTheme.DarkTextPrimary : WarmTheme.LightTextPrimary;
 
             using (Form form = new Form())
             {
-                form.Text = title;
-                form.Size = new Size(320, 150);
-                form.StartPosition = FormStartPosition.CenterParent;
-                form.FormBorderStyle = FormBorderStyle.FixedDialog;
-                form.MaximizeBox = false;
-                form.MinimizeBox = false;
-                form.BackColor = dlgBg;
-                form.ForeColor = txtCol;
-                if (this.Icon != null) form.Icon = this.Icon;
+                Panel hdr; ModernButton xBtn;
+                PrepareModernDialog(form, title, 336, 168, out hdr, out xBtn);
 
-                Label label = new Label { Left = 20, Top = 16, Text = promptText, ForeColor = txtCol, AutoSize = true };
-                TextBox textBox = new TextBox { Left = 20, Top = 40, Width = 260, Text = defaultValue, BackColor = cardBg, ForeColor = txtCol };
-                Button btnOk = new Button { Text = "确定", Left = 130, Width = 70, Top = 72, DialogResult = DialogResult.OK, BackColor = WarmTheme.Orange, ForeColor = Color.White, FlatStyle = FlatStyle.Flat };
-                btnOk.FlatAppearance.BorderSize = 0;
-                Button btnCancel = new Button { Text = "取消", Left = 210, Width = 70, Top = 72, DialogResult = DialogResult.Cancel, BackColor = cardBg, ForeColor = txtCol, FlatStyle = FlatStyle.Flat };
-                btnCancel.FlatAppearance.BorderColor = bdrCol;
+                Label label = new Label { Left = 20, Top = 52, Text = promptText, ForeColor = txtCol, AutoSize = true, Font = WarmTheme.CreateFont(9F) };
+                ModernTextBox textBox = new ModernTextBox
+                {
+                    Location = new Point(18, 74),
+                    Size = new Size(300, 34),
+                    Text = defaultValue,
+                    IsDarkTheme = isDark
+                };
+                ModernButton btnOk = new ModernButton
+                {
+                    Text = "确定",
+                    Location = new Point(144, 118),
+                    Size = new Size(88, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Primary,
+                    IsDarkTheme = isDark,
+                    AccentColor = WarmTheme.Orange,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    Font = WarmTheme.CreateFont(9.5F, FontStyle.Bold),
+                    DialogResult = DialogResult.OK
+                };
+                ModernButton btnCancel = new ModernButton
+                {
+                    Text = "取消",
+                    Location = new Point(240, 118),
+                    Size = new Size(76, WarmTheme.BtnHeightDialog),
+                    Variant = ButtonVariant.Secondary,
+                    IsDarkTheme = isDark,
+                    TextColor = txtCol,
+                    CornerRadius = WarmTheme.RadiusDialogBtn,
+                    DialogResult = DialogResult.Cancel
+                };
 
+                textBox.InnerTextBox.KeyDown += (s, e) =>
+                {
+                    if (e.KeyCode == Keys.Enter)
+                    {
+                        form.DialogResult = DialogResult.OK;
+                        form.Close();
+                        e.Handled = true;
+                    }
+                };
+                form.Shown += (s, e) => textBox.FocusInput();
                 form.Controls.AddRange(new Control[] { label, textBox, btnOk, btnCancel });
-                form.AcceptButton = btnOk;
-                form.CancelButton = btnCancel;
 
                 if (form.ShowDialog(this) == DialogResult.OK) return textBox.Text;
             }

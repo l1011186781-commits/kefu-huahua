@@ -1,16 +1,22 @@
 # 客服花花 (Huahua Helper) 🌸
 
-> **专为电商客服打造的轻量级极速快捷回复小助手 · v1.3「蝶翼双飞」**  
-> 一键将**文本话术、图片与视频文件**秒级穿透发送至**千牛客户端**聊天窗口，大幅提升客服接待效率！
+> **专为电商客服打造的轻量级极速快捷回复小助手 · v1.4「破茧而出」**  
+> 一键将**文本话术、图片与视频文件**秒级穿透发送至**千牛客户端**聊天窗口，兼顾 macOS 桌面精致度与 iOS 顺滑交互！
 
 [![Platform](https://img.shields.io/badge/Platform-Windows-0078D7?logo=windows)](https://github.com/l1011186781-commits/kefu-huahua)
 [![Framework](https://img.shields.io/badge/.NET%20Framework-4.0%2B-512BD4?logo=.net)](https://github.com/l1011186781-commits/kefu-huahua)
-[![Release](https://img.shields.io/badge/Release-v1.3%20%E8%9D%B6%E7%BF%BC%E5%8F%8C%E9%A3%9E-ff5000)](https://github.com/l1011186781-commits/kefu-huahua/releases)
+[![Release](https://img.shields.io/badge/Release-v1.4%20%E7%A0%B4%E8%8C%A7%E8%80%8C%E5%87%BA-ff5000)](https://github.com/l1011186781-commits/kefu-huahua/releases)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
 ## 🌟 核心特性
+
+- ✨ **破茧而出 · macOS × iOS 桌面级重塑 (v1.4 重磅升级)**：
+  - **无边框一体化顶栏 & Windows 原生尊重**：融合 DWM 原生圆角/沉浸深色边框与八向边缘缩放，右上角规整保留 Windows 最小化/最大化/关闭三键；支持窄屏单栏与宽屏（`>= 460px` 或 `Ctrl+B`）左导航侧边栏自适应切换，窄屏分类支持就近弹出 Popover 浮层。
+  - **桌面四级现代按钮与精致控件**：重构 `Primary / Secondary / Ghost / Destructive` 四级按钮（含 `120ms` 悬停渐变、顶部 `1px` 内高光、按压微下沉、键盘 Tab 外发光焦点环、`0.4` 禁用降级与定宽旋转加载态），并全面替换为滑块分段控制器、iOS 胶囊开关与无边框聚焦输入框。
+  - **极细悬浮滚动条与效率快捷键**：列表右侧升级为滚动/靠近渐显的极细圆角悬浮滚动条；支持 `Ctrl+F` 搜索、`Ctrl+N` 新建、`Ctrl+,` 设置、`Ctrl+T` 置顶、`Ctrl+B` 侧栏、`Ctrl+1`/`2` 模式切换、`F2` 重命名分类及原生感快捷键对齐右键菜单。
+  - **全弹窗体系重构**：设置页、新增/编辑词条、分类命名及二次确认/提示弹窗全部采用统一无边框圆角底座与居中现代确认框。
 
 - 🦋 **蝶翼双飞 · 文本与视频双模式 (v1.3 新增)**：
   - 新增 **「文本」** / **「视频」** 独立模式切换，各自拥有完全隔离的分类体系与话术列表，互不干扰。
