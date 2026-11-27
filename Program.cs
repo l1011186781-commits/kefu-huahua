@@ -5074,7 +5074,7 @@ namespace HuahuaHelper
 
                 Label lblGitHubTitle = new Label
                 {
-                    Text = "开源项目主页 · 客服花花 v1.3 蝶翼双飞",
+                    Text = "开源地址",
                     Location = new Point(14, 10),
                     AutoSize = true,
                     Font = WarmTheme.CreateFont(8.5F, FontStyle.Bold),
