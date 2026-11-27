@@ -420,6 +420,38 @@ namespace HuahuaHelper
             }
             catch { }
         }
+
+        /// <summary>
+        /// 让贴边铺满的子控件在主窗体边缘 7px（及右下角 14px）内将 WM_NCHITTEST 透传给父窗体，确保无边框四边八向流畅缩放
+        /// </summary>
+        public static bool TryPassEdgeHitTest(Control ctrl, ref Message m, int grip = 7)
+        {
+            if (m.Msg != 0x0084 || ctrl == null) return false; // WM_NCHITTEST
+            Form f = ctrl.FindForm();
+            if (f == null || f.WindowState != FormWindowState.Normal) return false;
+            int sx = unchecked((short)(long)m.LParam);
+            int sy = unchecked((short)((long)m.LParam >> 16));
+            Point pt = f.PointToClient(new Point(sx, sy));
+            int w = f.ClientSize.Width;
+            int h = f.ClientSize.Height;
+            bool inResizeGrip = (pt.X <= grip || pt.X >= w - grip || pt.Y <= grip || pt.Y >= h - grip) ||
+                                (pt.X >= w - 14 && pt.Y >= h - 14);
+            if (inResizeGrip)
+            {
+                m.Result = (IntPtr)(-1); // HTTRANSPARENT
+                return true;
+            }
+            return false;
+        }
+    }
+
+    public class ResizePassPanel : Panel
+    {
+        protected override void WndProc(ref Message m)
+        {
+            if (Win32WindowStyler.TryPassEdgeHitTest(this, ref m)) return;
+            base.WndProc(ref m);
+        }
     }
 
     /// <summary>
@@ -1172,6 +1204,12 @@ namespace HuahuaHelper
                     TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.SingleLine);
             }
         }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (Win32WindowStyler.TryPassEdgeHitTest(this, ref m)) return;
+            base.WndProc(ref m);
+        }
     }
 
     /// <summary>
@@ -1451,6 +1489,12 @@ namespace HuahuaHelper
                 GlassRenderer.DrawModernButtonSurface(g, delRect, ButtonVariant.Ghost, WarmTheme.DestructiveRed, IsDarkTheme, _hoverDelBtn ? 1f : 0f, false, false, true, 6, delHoverBg);
                 GlassRenderer.DrawVectorMinusIcon(g, delRect, _hoverDelBtn ? WarmTheme.DestructiveRed : iconMuted);
             }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (Win32WindowStyler.TryPassEdgeHitTest(this, ref m)) return;
+            base.WndProc(ref m);
         }
     }
 
@@ -2202,6 +2246,12 @@ namespace HuahuaHelper
                 }
             }
         }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (Win32WindowStyler.TryPassEdgeHitTest(this, ref m)) return;
+            base.WndProc(ref m);
+        }
     }
 
     /// <summary>
@@ -2229,6 +2279,12 @@ namespace HuahuaHelper
             {
                 e.Graphics.DrawLine(p, 0, this.Height - 1, this.Width, this.Height - 1);
             }
+        }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (Win32WindowStyler.TryPassEdgeHitTest(this, ref m, 6)) return;
+            base.WndProc(ref m);
         }
     }
 
@@ -3114,6 +3170,12 @@ namespace HuahuaHelper
             GlassRenderer.DrawModernButtonSurface(g, delR, ButtonVariant.Ghost, WarmTheme.DestructiveRed, IsDarkTheme, _hoverDel ? 1f : 0f, false, false, true, 6, delBg);
             GlassRenderer.DrawVectorMinusIcon(g, delR, _hoverDel ? WarmTheme.DestructiveRed : iconCol);
         }
+
+        protected override void WndProc(ref Message m)
+        {
+            if (Win32WindowStyler.TryPassEdgeHitTest(this, ref m)) return;
+            base.WndProc(ref m);
+        }
     }
 
     /// <summary>
@@ -3614,21 +3676,28 @@ namespace HuahuaHelper
             base.WndProc(ref m);
             if (m.Msg == WM_NCHITTEST && this.WindowState == FormWindowState.Normal)
             {
-                Point pt = this.PointToClient(new Point(m.LParam.ToInt32()));
-                int grip = 6;
-                bool left = pt.X <= grip;
-                bool right = pt.X >= this.ClientSize.Width - grip;
-                bool top = pt.Y <= grip;
-                bool bottom = pt.Y >= this.ClientSize.Height - grip;
+                int sx = unchecked((short)(long)m.LParam);
+                int sy = unchecked((short)((long)m.LParam >> 16));
+                Point pt = this.PointToClient(new Point(sx, sy));
+                int w = this.ClientSize.Width;
+                int h = this.ClientSize.Height;
+                int grip = 7;
+                int topGrip = 6;
 
-                if (top && left) m.Result = (IntPtr)13;       // HTTOPLEFT
-                else if (top && right) m.Result = (IntPtr)14; // HTTOPRIGHT
-                else if (bottom && left) m.Result = (IntPtr)16; // HTBOTTOMLEFT
-                else if (bottom && right) m.Result = (IntPtr)17; // HTBOTTOMRIGHT
-                else if (left) m.Result = (IntPtr)10;         // HTLEFT
-                else if (right) m.Result = (IntPtr)11;        // HTRIGHT
-                else if (top) m.Result = (IntPtr)12;          // HTTOP
-                else if (bottom) m.Result = (IntPtr)15;       // HTBOTTOM
+                bool left = pt.X <= grip;
+                bool right = pt.X >= w - grip;
+                bool top = pt.Y <= topGrip;
+                bool bottom = pt.Y >= h - grip;
+
+                if (pt.X >= w - 14 && pt.Y >= h - 14) m.Result = (IntPtr)17; // HTBOTTOMRIGHT 宽容右下角缩放区
+                else if (top && left) m.Result = (IntPtr)13;       // HTTOPLEFT
+                else if (top && right) m.Result = (IntPtr)14;      // HTTOPRIGHT
+                else if (bottom && left) m.Result = (IntPtr)16;    // HTBOTTOMLEFT
+                else if (bottom && right) m.Result = (IntPtr)17;   // HTBOTTOMRIGHT
+                else if (left) m.Result = (IntPtr)10;              // HTLEFT
+                else if (right) m.Result = (IntPtr)11;             // HTRIGHT
+                else if (top) m.Result = (IntPtr)12;               // HTTOP
+                else if (bottom) m.Result = (IntPtr)15;            // HTBOTTOM
             }
         }
 
@@ -4611,12 +4680,12 @@ namespace HuahuaHelper
             };
 
             // 6. 底部精致状态栏
-            _statusBar = new Panel
+            _statusBar = new ResizePassPanel
             {
                 Dock = DockStyle.Bottom,
                 Height = 24,
                 BackColor = WarmTheme.LightSidebarBg,
-                Padding = new Padding(12, 3, 12, 2)
+                Padding = new Padding(12, 3, 14, 2)
             };
             _statusBar.Paint += (s, e) =>
             {
@@ -4625,6 +4694,16 @@ namespace HuahuaHelper
                 using (Pen p = new Pen(lineCol, 1))
                 {
                     e.Graphics.DrawLine(p, 0, 0, _statusBar.Width, 0);
+                }
+                // 右下角精致斜线拖拽调整尺寸提示纹
+                Color gripCol = isDark ? Color.FromArgb(95, 255, 255, 255) : Color.FromArgb(75, 0, 0, 0);
+                using (Pen gp = new Pen(gripCol, 1.2f))
+                {
+                    e.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+                    int r = _statusBar.Width - 4;
+                    int b = _statusBar.Height - 4;
+                    e.Graphics.DrawLine(gp, r - 6, b, r, b - 6);
+                    e.Graphics.DrawLine(gp, r - 2.5f, b, r, b - 2.5f);
                 }
             };
             _lblTarget = new Label
