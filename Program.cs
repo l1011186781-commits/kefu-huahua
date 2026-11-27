@@ -3592,6 +3592,25 @@ namespace HuahuaHelper
         private const int WM_NCLBUTTONDOWN = 0x00A1;
         private const int HTCAPTION = 2;
         private const int WM_NCHITTEST = 0x0084;
+        private const int WM_NCCALCSIZE = 0x0083;
+
+        [DllImport("user32.dll")]
+        private static extern bool IsZoomed(IntPtr hWnd);
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct RECT
+        {
+            public int Left, Top, Right, Bottom;
+        }
+
+        [StructLayout(LayoutKind.Sequential)]
+        private struct NCCALCSIZE_PARAMS
+        {
+            public RECT rgrc0;
+            public RECT rgrc1;
+            public RECT rgrc2;
+            public IntPtr lppos;
+        }
 
         private IntPtr _lastTargetHwnd = IntPtr.Zero;
         private string _lastTargetTitle = "";
@@ -3664,8 +3683,10 @@ namespace HuahuaHelper
             get
             {
                 CreateParams cp = base.CreateParams;
-                // 保留任务栏最小化/还原原生交互能力
+                // 保留任务栏最小化/最大化/原生四边拖拽缩放能力
                 cp.Style |= 0x00020000; // WS_MINIMIZEBOX
+                cp.Style |= 0x00010000; // WS_MAXIMIZEBOX
+                cp.Style |= 0x00040000; // WS_THICKFRAME (无此样式时 DefWindowProc 会拒绝边缘拖拽缩放)
                 cp.Style |= 0x00080000; // WS_SYSMENU
                 return cp;
             }
@@ -3673,6 +3694,23 @@ namespace HuahuaHelper
 
         protected override void WndProc(ref Message m)
         {
+            if (m.Msg == WM_NCCALCSIZE && m.WParam != IntPtr.Zero)
+            {
+                // 去除 WS_THICKFRAME 带来的系统默认边框与白条；最大化时精准贴合工作区不遮挡任务栏
+                if (IsZoomed(this.Handle))
+                {
+                    NCCALCSIZE_PARAMS ncp = (NCCALCSIZE_PARAMS)Marshal.PtrToStructure(m.LParam, typeof(NCCALCSIZE_PARAMS));
+                    Rectangle wa = Screen.FromHandle(this.Handle).WorkingArea;
+                    ncp.rgrc0.Left = wa.Left;
+                    ncp.rgrc0.Top = wa.Top;
+                    ncp.rgrc0.Right = wa.Right;
+                    ncp.rgrc0.Bottom = wa.Bottom;
+                    Marshal.StructureToPtr(ncp, m.LParam, false);
+                }
+                m.Result = IntPtr.Zero;
+                return;
+            }
+
             base.WndProc(ref m);
             if (m.Msg == WM_NCHITTEST && this.WindowState == FormWindowState.Normal)
             {
